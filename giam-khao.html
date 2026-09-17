@@ -889,12 +889,11 @@ function openDuDoanModal(stt,btn){
   document.querySelector('#voteModal .vote-modal-icon').textContent='🔮';
   document.querySelector('#voteModal .vote-modal-title').textContent='Bạn có chắc chắn không?';
   document.querySelector('#voteModal .vote-modal-sub').textContent='Chọn một linh vật bạn đoán sẽ đạt giải Nhất';
-  document.querySelector('#voteModal .vote-modal-note').textContent='🏆 Đoán trúng giải Nhất sớm nhất sẽ được trao thưởng — SĐT để BTC liên hệ';
+  document.querySelector('#voteModal .vote-modal-note').textContent='🏆 Đoán trúng giải Nhất sớm nhất sẽ được trao thưởng';
   document.getElementById('voteModalConfirm').textContent='Xác nhận dự đoán';
   document.getElementById('voteModalConfirm').onclick=confirmDuDoan;
-  document.querySelector('#voteModal .vote-sdt-wrap').style.display='';
-  document.querySelector('#voteModal .vote-sdt-wrap input').placeholder='Nhập SĐT để nhận thưởng khi đoán đúng';
-  resetSdtInput();
+  document.querySelector('#voteModal .vote-sdt-wrap').style.display='none';
+  
   document.getElementById('voteModal').classList.add('open');
 }
 // override vote modal text khi mở vote
@@ -904,11 +903,11 @@ openVoteModal=function(stt,btn){
   document.querySelector('#voteModal .vote-modal-icon').textContent='💖';
   document.querySelector('#voteModal .vote-modal-title').textContent='Bạn có chắc chắn không?';
   document.querySelector('#voteModal .vote-modal-sub').textContent='Chọn một linh vật mà bạn yêu thích nhất nhé';
-  document.querySelector('#voteModal .vote-modal-note').textContent='⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu (SĐT để trao thưởng)';
+  document.querySelector('#voteModal .vote-modal-note').textContent='⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu';
   document.getElementById('voteModalConfirm').textContent='Xác nhận chọn';
   document.getElementById('voteModalConfirm').onclick=confirmVote;
-  document.querySelector('#voteModal .vote-sdt-wrap').style.display='';
-  document.querySelector('#voteModal .vote-sdt-wrap input').placeholder='Nhập SĐT để nhận thưởng';
+  document.querySelector('#voteModal .vote-sdt-wrap').style.display='none';
+  
   resetSdtInput();
 }
 async function buildDuDoanUI(){

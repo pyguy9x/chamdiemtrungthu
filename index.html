@@ -223,7 +223,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
     <div class="vote-modal-body">
       <div class="vote-modal-card" id="voteModalCard"></div>
       <div class="vote-sdt-wrap">
-        <input id="voteSdtInput" class="vote-sdt-input" type="tel" inputmode="numeric" maxlength="11" placeholder="Nhập SĐT để nhận thưởng (VD: 098...)">
+        <input id="voteSdtInput" class="vote-sdt-input" type="tel" inputmode="numeric" maxlength="11" placeholder=" (VD: 098...)">
         <div class="vote-sdt-hint">SDT dùng để trao thưởng khi bạn đoán/bình chọn trúng — không hiển thị công khai</div>
       </div>
       <div class="vote-modal-note">⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu</div>
@@ -892,9 +892,7 @@ function openDuDoanModal(stt,btn){
   document.querySelector('#voteModal .vote-modal-note').textContent='🏆 Đoán trúng giải Nhất sớm nhất sẽ được trao thưởng — SĐT để BTC liên hệ';
   document.getElementById('voteModalConfirm').textContent='Xác nhận dự đoán';
   document.getElementById('voteModalConfirm').onclick=confirmDuDoan;
-  document.querySelector('#voteModal .vote-sdt-wrap').style.display='';
-  document.querySelector('#voteModal .vote-sdt-wrap input').placeholder='Nhập SĐT để nhận thưởng khi đoán đúng';
-  resetSdtInput();
+  document.querySelector('#voteModal .vote-sdt-wrap').style.display='none';
   document.getElementById('voteModal').classList.add('open');
 }
 // override vote modal text khi mở vote
@@ -904,12 +902,10 @@ openVoteModal=function(stt,btn){
   document.querySelector('#voteModal .vote-modal-icon').textContent='💖';
   document.querySelector('#voteModal .vote-modal-title').textContent='Bạn có chắc chắn không?';
   document.querySelector('#voteModal .vote-modal-sub').textContent='Chọn một linh vật mà bạn yêu thích nhất nhé';
-  document.querySelector('#voteModal .vote-modal-note').textContent='⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu (SĐT để trao thưởng)';
+  document.querySelector('#voteModal .vote-modal-note').textContent='⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu';
   document.getElementById('voteModalConfirm').textContent='Xác nhận chọn';
   document.getElementById('voteModalConfirm').onclick=confirmVote;
-  document.querySelector('#voteModal .vote-sdt-wrap').style.display='';
-  document.querySelector('#voteModal .vote-sdt-wrap input').placeholder='Nhập SĐT để nhận thưởng';
-  resetSdtInput();
+  document.querySelector('#voteModal .vote-sdt-wrap').style.display='none';
 }
 async function buildDuDoanUI(){
   const c=document.getElementById("dudoanContainer");
