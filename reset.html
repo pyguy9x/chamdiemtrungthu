@@ -25,20 +25,37 @@ input{width:100%;padding:10px;border:1px solid #fde68a;border-radius:8px;margin-
   <div class="head"><h1>🔄 Reset kết quả</h1><p style="font-size:12px;opacity:.9">Bình chọn + Dự đoán</p></div>
   <div class="body">
     <div class="warn">⚠️ Xóa <b>toàn bộ</b> bình chọn & dự đoán trong Supabase. Không khôi phục được!</div>
-    <input id="pw" type="password" placeholder="Nhập mã xác nhận: 2026">
-    <button class="btn btn-danger" id="btnReset" onclick="doReset()">Xóa hết Bình chọn + Đoán</button>
+    <input id="pw" type="password" style="display:none">
+    <button class="btn btn-danger" id="btnReset" onclick="doReset()">Xóa hết Bình chọn + Đoán (Supabase)</button>
+    <button class="btn btn-ghost" id="btnResetDevice" onclick="resetDevice()">🔄 Reset ID thiết bị này (để nhập mới)</button>
     <button class="btn btn-ghost" onclick="location.href='/'">← Về trang chủ</button>
     <div class="log" id="log"></div>
-    <p style="font-size:11px;color:#a8a29e;margin-top:10px">Link trực tiếp: <code>?confirm=2026</code> tự chạy khi có mã</p>
+    <p style="font-size:11px;color:#a8a29e;margin-top:10px">Link trực tiếp: <code>?confirm=2026</code> tự chạy</p>
   </div>
 </div>
 <script>
 const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
 function log(m){const el=document.getElementById('log');el.style.display='block';el.textContent+=m+"\n"}
+function resetDevice(){
+  try{
+    localStorage.removeItem('kg_info');
+    localStorage.removeItem('bc_device_id');
+    localStorage.removeItem('da_binh_chon');
+    localStorage.removeItem('da_du_doan');
+    localStorage.removeItem('saved_sdt');
+    localStorage.removeItem('cd2026_device_id');
+    sessionStorage.removeItem('desktop_popup_dismissed');
+    // xóa mọi key liên quan
+    Object.keys(localStorage).forEach(k=>{ if(k.startsWith('cd2026_')||k.includes('binh_chon')||k.includes('du_doan')) localStorage.removeItem(k); });
+    log('✅ Đã reset ID thiết bị + thông tin khán giả trên máy này. Tải lại để nhập mới.');
+    alert('Đã reset thiết bị này! Bạn có thể nhập lại họ tên/thôn/SĐT.');
+  }catch(e){ log('❌ Lỗi reset device: '+e.message); }
+}
 async function doReset(){
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='2026'){alert('Mã sai! Nhập 2026');return}
-  if(!confirm('Chắc chắn XÓA HẾT bình chọn + dự đoán?')) return;
+  // mã ẩn, không cần nhập — tự 2026
+  const pw=(document.getElementById('pw').value.trim()||'2026');
+  if(pw!=='2026'){alert('Mã sai!');return}
+  if(!confirm('Chắc chắn XÓA HẾT bình chọn + dự đoán trên Supabase?')) return;
   const btn=document.getElementById('btnReset'); btn.disabled=true; btn.textContent='⏳ Đang xóa...';
   try{
     // Xóa du_doan
