@@ -54,7 +54,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
 .summary-head h2{font-size:17px;text-shadow:0 1px 2px rgba(0,0,0,.2)}
 .summary-head button{padding:6px 14px;border:none;border-radius:8px;background:#fff;color:#991b1b;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);border:1px solid #fde68a}
 .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.summary-table{width:100%;border-collapse:collapse;min-width:760px;font-size:14px;table-layout:auto}
+.summary-table{width:100%;border-collapse:collapse;min-width:820px;font-size:14px;table-layout:auto}
 .summary-table th{background:#fef2f2;color:#7f1d1d;padding:10px 8px;text-align:center;white-space:nowrap;font-size:13px;border-bottom:2px solid #fde68a}
 .summary-table td{padding:9px 8px;border-bottom:1px solid #eee;text-align:center;vertical-align:middle;white-space:normal;word-break:normal;overflow-wrap:break-word}
 .summary-table td:nth-child(1){white-space:nowrap;vertical-align:middle}
@@ -191,6 +191,23 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
 .audience-btn:disabled{opacity:.6;cursor:not-allowed;filter:none;transform:none}
 .audience-foot{margin-top:10px;text-align:center;font-size:12px;color:#94a3b8}
 .audience-badge{margin:0 20px 14px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:8px 12px;font-size:12px;color:#475569;text-align:center}
+.judge-pin-overlay{position:fixed;inset:0;background:rgba(127,29,29,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.judge-pin-overlay.open{display:flex}
+.judge-pin-modal{background:#fff;border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.2);max-width:380px;width:100%;overflow:hidden;animation:pop .2s ease}
+.judge-pin-head{padding:20px 20px 0;text-align:center}
+.judge-pin-icon{width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,#fde68a,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:28px}
+.judge-pin-title{font-weight:800;color:#7f1d1d;font-size:17px}
+.judge-pin-sub{font-size:13px;color:#78716c;margin-top:4px;line-height:1.4}
+.judge-pin-body{padding:16px 20px}
+.judge-pin-input{width:100%;padding:12px;border:1px solid #fde68a;border-radius:10px;text-align:center;letter-spacing:4px;font-size:18px;font-weight:700}
+.judge-pin-input:focus{outline:none;border-color:#991b1b;box-shadow:0 0 0 3px rgba(127,29,29,.12)}
+.judge-pin-input.err{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.judge-pin-actions{display:flex;gap:10px;padding:0 20px 20px}
+.judge-pin-btn{flex:1;padding:12px;border-radius:10px;font-weight:700;border:none;cursor:pointer}
+.judge-pin-btn.cancel{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.judge-pin-btn.confirm{background:#991b1b;color:#fff;box-shadow:0 4px 12px rgba(127,29,29,.2)}
+.judge-pin-hint{font-size:11px;color:#a8a29e;margin-top:6px;text-align:center}
+
 </style>
 </head>
 <body>
@@ -198,6 +215,24 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
   <h1>🎯 Mô hình Trung Thu 2026</h1>
   <div class="judge-badge" id="judgeName">Giám khảo</div>
 </div>
+<div class="judge-pin-overlay" id="judgePinOverlay" onclick="if(event.target===this) return;">
+  <div class="judge-pin-modal">
+    <div class="judge-pin-head">
+      <div class="judge-pin-icon">🔒</div>
+      <div class="judge-pin-title" id="judgePinTitle">Nhập mã PIN giám khảo</div>
+      <div class="judge-pin-sub" id="judgePinSub">Vui lòng nhập mã PIN được BTC cấp riêng</div>
+    </div>
+    <div class="judge-pin-body">
+      <input id="judgePinInput" type="password" inputmode="numeric" maxlength="4" class="judge-pin-input" placeholder="••••">
+      <div class="judge-pin-hint">Liên hệ BTC nếu quên mã</div>
+    </div>
+    <div class="judge-pin-actions">
+      <button class="judge-pin-btn cancel" onclick="location.href='/'">Về trang chủ</button>
+      <button class="judge-pin-btn confirm" onclick="confirmJudgePin()">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <div class="config-bar" id="configBar" style="display:none">
     <input type="hidden" id="supabaseUrl">
@@ -316,6 +351,53 @@ const CRITERIA=[
 
 const JUDGES=["loi","hieu","hung","loan","cuong"];
 const JN={loi:"Lợi",hieu:"Hiếu",hung:"Hùng",loan:"Loan",cuong:"Cường"};
+const J_MAP = {"vkxl": "loi", "7k1e": "hieu", "h1jw": "hung", "l7w7": "loan", "sn24": "cuong"};
+const PIN_HASH = {"vkxl": "cf830153793c89f335238980bb4b0aa3214c8189a45ff5c8700195fdd73ecccb", "7k1e": "e2b79c6b00bc97ebb7a345ef636f2fe539aaa43946bf7d6c8052a22b22462649", "h1jw": "5805921783d4f48c7ddacf69382814a769b81b318735bc11ea309b2fa4e5a47b", "l7w7": "e1972d242ea4f7307af9d94d44b6ebe3afea30a30a974d4976f8131cbec1e232", "sn24": "567c38161a125f1d049703d0e67e1062fdd9b975ecf00688cc61415c997e71c6"};
+async function sha256(s){ const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function getJudgeFromJ(){
+  const j=new URLSearchParams(location.search).get("j");
+  if(j && J_MAP[j]) return J_MAP[j];
+  const legacy=new URLSearchParams(location.search).get("judge");
+  if(legacy && J_MAP[Object.keys(J_MAP).find(k=>J_MAP[k]===legacy)]) return legacy;
+  // fallback: if j param directly is judge name (old link) try map
+  if(j && ["loi","hieu","hung","loan","cuong"].includes(j)) return j;
+  return null;
+}
+function openJudgePinModal(judge, jCode){
+  const title=document.getElementById('judgePinTitle');
+  const sub=document.getElementById('judgePinSub');
+  const name=JN[judge]||judge;
+  if(title) title.textContent=`Nhập mã PIN - GK `+name;
+  if(sub) sub.textContent=`Link ?j=${jCode} yêu cầu mã PIN riêng`;
+  document.getElementById('judgePinInput').value='';
+  document.getElementById('judgePinInput').classList.remove('err');
+  document.getElementById('judgePinOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('judgePinInput').focus(),100);
+}
+async function confirmJudgePin(){
+  const inp=document.getElementById('judgePinInput');
+  const v=inp.value.trim();
+  if(!v){ inp.classList.add('err'); inp.focus(); return; }
+  const j=new URLSearchParams(location.search).get("j");
+  const expected=PIN_HASH[j];
+  if(!expected){ alert('Link không hợp lệ'); return; }
+  const h=await sha256(v);
+  if(h!==expected){
+    inp.classList.add('err'); inp.focus();
+    // đếm sai
+    const k='pin_fail_'+j; const cnt=parseInt(sessionStorage.getItem(k)||'0')+1;
+    sessionStorage.setItem(k, String(cnt));
+    if(cnt>=3){ alert('Sai quá 3 lần, thử lại sau 5 phút'); setTimeout(()=>sessionStorage.removeItem(k), 300000); }
+    else alert('Mã PIN không đúng');
+    return;
+  }
+  sessionStorage.setItem('auth_'+j, 'ok');
+  sessionStorage.removeItem('pin_fail_'+j);
+  document.getElementById('judgePinOverlay').classList.remove('open');
+  // reload init flow
+  location.reload();
+}
+
 
 let currentJudge="loi";
 let scores={};
@@ -402,6 +484,43 @@ function showAudienceDuDoan(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function init(){
+  // --- Gate ?j=xxxx + PIN cho giam-khao ---
+  const jParam=new URLSearchParams(location.search).get("j");
+  const judgeFromJ = J_MAP[jParam];
+  if(!judgeFromJ){
+    // kiểm tra legacy ?judge=loi -> redirect che
+    const legacyJudge=new URLSearchParams(location.search).get("judge");
+    if(legacyJudge && ["loi","hieu","hung","loan","cuong"].includes(legacyJudge)){
+      const jForLegacy = Object.keys(J_MAP).find(k=>J_MAP[k]===legacyJudge);
+      if(jForLegacy){ location.replace(location.pathname+`?j=${jForLegacy}`); return; }
+    }
+    if(!jParam){
+      document.getElementById("judgeName").textContent="🔒 Link không hợp lệ";
+      document.getElementById("tabBar").innerHTML='<div style="padding:20px;text-align:center;color:#991b1b;background:#fef2f2;border-radius:10px">Link giám khảo không hợp lệ. Vui lòng dùng link <code>?j=xxxx</code> do BTC cấp.</div>';
+      document.getElementById("modelsContainer").style.display="none";
+      document.getElementById("saveBtn").style.display="none";
+      return;
+    } else {
+      document.getElementById("judgeName").textContent="🔒 Link không hợp lệ";
+      document.getElementById("tabBar").innerHTML='<div style="padding:20px;text-align:center;color:#991b1b;background:#fef2f2;border-radius:10px">Mã <code>?j='+jParam+'</code> không tồn tại.</div>';
+      document.getElementById("modelsContainer").style.display="none";
+      document.getElementById("saveBtn").style.display="none";
+      return;
+    }
+  }
+  if(sessionStorage.getItem('auth_'+jParam)!=='ok'){
+    document.getElementById("judgeName").textContent="🔒 Yêu cầu mã PIN";
+    // ẩn nội dung chấm
+    document.getElementById("modelsContainer").style.display="none";
+    document.getElementById("saveBtn").style.display="none";
+    document.getElementById("summaryContainer").style.display="none";
+    buildTabs();
+    openJudgePinModal(judgeFromJ, jParam);
+    return;
+  }
+  // đã auth -> gán currentJudge = judgeFromJ
+  currentJudge = judgeFromJ;
+
   // giam-khao.html: luôn ở chế độ giám khảo
   const audienceHome = false; const view=new URLSearchParams(window.location.search).get("view");
   const hasJudge=new URLSearchParams(window.location.search).has("judge");
@@ -434,7 +553,7 @@ function init(){
   if(view==='tonghop'){ isSummary=true; }
   if(view==='binhchon'){ isVote=true; }
   if(view==='dudoan'){ isDuDoan=true; }
-  currentJudge=JUDGES.includes(getJudgeFromURL())?getJudgeFromURL():"loi";
+  if(typeof judgeFromJ!=="undefined" && judgeFromJ) currentJudge=judgeFromJ; else currentJudge=JUDGES.includes(getJudgeFromURL())?getJudgeFromURL():"loi";
   if(isDuDoan) document.getElementById("judgeName").textContent="🔮 Dự đoán kết quả";
   else if(isVote) document.getElementById("judgeName").textContent="🗳️ Bình chọn khán giả";
   else document.getElementById("judgeName").textContent=isSummary?"📊 Tổng hợp điểm":"Giám khảo "+JN[currentJudge];
@@ -468,7 +587,7 @@ function init(){
   }
 }
 
-function getJudgeFromURL(){return new URLSearchParams(window.location.search).get("judge")||"loi";}
+function getJudgeFromURL(){ const j=new URLSearchParams(window.location.search).get("j"); if(j && J_MAP[j]) return J_MAP[j]; return new URLSearchParams(window.location.search).get("judge")||"loi";}
 function buildTabs(){
   const bar=document.getElementById("tabBar");
   let h='';
@@ -1078,7 +1197,7 @@ async function loadSummary(){
       rows=Object.values(map).map(x=>({...x,diem_tb:Math.round(((x.diem_gk_loi||0)+(x.diem_gk_hieu||0)+(x.diem_gk_hung||0)+(x.diem_gk_loan||0)+(x.diem_gk_cuong||0))/5*10)/10})).sort((a,b)=>a.stt-b.stt);
     }
     if(!rows.length){ c.innerHTML='<div style="padding:24px;text-align:center;color:#666">Chưa có dữ liệu chấm điểm</div>'; return; }
-    // Lấy số phiếu khán giả để hiển thị cùng bảng tổng hợp
+    // Lấy số phiếu khán giả + số dự đoán để hiển thị cùng bảng tổng hợp
     let voteMap={};
     try{
       const vr=await fetch(`${config.url}/rest/v1/thong_ke_binh_chon?select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
@@ -1088,11 +1207,16 @@ async function loadSummary(){
         if(vr2.ok){ const vrows2=await vr2.json(); vrows2.forEach(x=> voteMap[x.stt]=(voteMap[x.stt]||0)+1); }
       }
     }catch(e){}
+    let duDoanMap={};
+    try{
+      const dr=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(dr.ok){ const drows=await dr.json(); drows.forEach(x=> duDoanMap[x.stt_du_doan]=(duDoanMap[x.stt_du_doan]||0)+1); }
+    }catch(e){}
     const sorted=[...rows].sort((a,b)=> (b.diem_tb||0)-(a.diem_tb||0));
     const rankMap={}; sorted.forEach((r,i)=>{ if(i>0 && r.diem_tb===sorted[i-1].diem_tb) rankMap[r.stt]=rankMap[sorted[i-1].stt]; else rankMap[r.stt]=i+1; });
     rows.forEach(r=> r.hang=rankMap[r.stt]);
     rows.sort((a,b)=> a.hang-b.hang || a.stt-b.stt);
-    let html=`<div class="summary-wrap"><div class="summary-head"><h2>📊 Bảng tổng hợp điểm (${rows.length} mô hình)</h2><button onclick="loadSummary()">↻ Làm mới</button></div><div class="table-scroll"><table class="summary-table"><thead><tr><th>Hạng</th><th>STT</th><th>Tên mô hình</th><th>Đơn vị</th><th>GK Lợi</th><th>GK Hiếu</th><th>GK Hùng</th><th>GK Loan</th><th>GK Cường</th><th>TB</th><th>🗳️ Khán giả</th></tr></thead><tbody>`;
+    let html=`<div class="summary-wrap"><div class="summary-head"><h2>📊 Bảng tổng hợp điểm (${rows.length} mô hình)</h2><button onclick="loadSummary()">↻ Làm mới</button></div><div class="table-scroll"><table class="summary-table"><thead><tr><th>Hạng</th><th>STT</th><th>Tên mô hình</th><th>Đơn vị</th><th>GK Lợi</th><th>GK Hiếu</th><th>GK Hùng</th><th>GK Loan</th><th>GK Cường</th><th>TB</th><th>🗳️ Khán giả</th><th>🔮 Dự đoán</th></tr></thead><tbody>`;
     rows.forEach(r=>{
       const rc=r.hang===1?'rank-1':r.hang===2?'rank-2':r.hang===3?'rank-3':'';
       const bc=r.hang===1?'badge-1':r.hang===2?'badge-2':r.hang===3?'badge-3':'';
@@ -1100,7 +1224,10 @@ async function loadSummary(){
       const soPhieu=voteMap[r.stt]||0;
       const phieuColor=soPhieu>0?'#2e7d32':'#90a4ae';
       const phieuWeight=soPhieu>0?'bold':'normal';
-      html+=`<tr class="${rc}"><td>${badge}</td><td>${r.stt}</td><td style="font-weight:600">${r.ten_mo_hinh||''}</td><td>${r.ten_don_vi||''}</td><td>${r.diem_gk_loi??'-'}</td><td>${r.diem_gk_hieu??'-'}</td><td>${r.diem_gk_hung??'-'}</td><td>${r.diem_gk_loan??'-'}</td><td>${r.diem_gk_cuong??'-'}</td><td style="font-weight:bold;color:#1a237e">${r.diem_tb??0}</td><td style="font-weight:${phieuWeight};color:${phieuColor}">${soPhieu||'0'}</td></tr>`;
+      const soDuDoan=duDoanMap[r.stt]||0;
+      const duDoanColor=soDuDoan>0?'#5b21b6':'#90a4ae';
+      const duDoanWeight=soDuDoan>0?'bold':'normal';
+      html+=`<tr class="${rc}"><td>${badge}</td><td>${r.stt}</td><td style="font-weight:600">${r.ten_mo_hinh||''}</td><td>${r.ten_don_vi||''}</td><td>${r.diem_gk_loi??'-'}</td><td>${r.diem_gk_hieu??'-'}</td><td>${r.diem_gk_hung??'-'}</td><td>${r.diem_gk_loan??'-'}</td><td>${r.diem_gk_cuong??'-'}</td><td style="font-weight:bold;color:#1a237e">${r.diem_tb??0}</td><td style="font-weight:${phieuWeight};color:${phieuColor}">${soPhieu||'0'}</td><td style="font-weight:${duDoanWeight};color:${duDoanColor}">${soDuDoan||'0'}</td></tr>`;
     });
     html+='</tbody></table></div></div>';
     // link chia sẻ bình chọn
