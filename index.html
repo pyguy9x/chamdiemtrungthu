@@ -929,12 +929,8 @@ async function buildDuDoanUI(){
     banner=`<div class="vote-banner open" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);color:#5b21b6;border-color:#ddd6fe">🔮 Chọn một linh vật bạn đoán sẽ đạt giải Nhất. Nếu nhiều người đoán đúng, ai gửi sớm nhất sẽ thắng!</div>`;
   }
   let winnerInfo='';
-  if(winnerStt){
-    const wm=MODELS.find(x=>x.stt===winnerStt);
-    winnerInfo=`<div style="margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #ddd6fe;border-radius:10px;text-align:center">🏆 Hiện tại dẫn đầu: <b>${wm?wm.name:''}</b> — người đoán đúng sớm nhất sẽ đạt giải</div>`;
-  } else {
-    winnerInfo=`<div style="margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;text-align:center;color:#78909c">⏳ Chưa có kết quả chấm — cứ đoán trước, hệ thống ghi thời gian gửi để xét sớm nhất</div>`;
-  }
+  // Ẩn "Hiện tại dẫn đầu" ở khán giả theo yêu cầu — giữ trống để không hiện
+  // if(winnerStt){ ... } else { ... }
   // Chuẩn bị kết quả lên đầu (trước grid) để dễ thấy trên ĐT
   let resultHtml='';
   if(winnerStt){
