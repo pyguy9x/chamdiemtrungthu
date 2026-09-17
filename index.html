@@ -22,7 +22,8 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f5f5f5;color:#333}
 .model-header:hover{background:#c5cae9}
 .model-header .info{font-size:16px;font-weight:bold}
 .model-header .unit{color:#555;font-size:14px}
-.model-header .total{background:#1a237e;color:#fff;padding:4px 12px;border-radius:12px;font-weight:bold}
+.model-header .total{color:#fff;padding:6px 14px;border-radius:12px;font-weight:bold;min-width:56px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.2);font-size:15px}
+.model-card{border-left:5px solid transparent}
 .model-body{padding:16px;display:none}
 .model-body.open{display:block}
 .criteria{margin-bottom:16px}
@@ -30,7 +31,10 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f5f5f5;color:#333}
 .criteria-title .max-points{font-weight:normal;opacity:.9;white-space:nowrap}
 .sub-criteria{margin-left:16px;margin-bottom:8px}
 .sub-criteria .label{font-size:14px;color:#555;margin-bottom:4px;line-height:1.4}
-.sub-criteria .stars{display:flex;gap:4px}
+.sub-criteria .slider-wrap{display:flex;align-items:center;gap:10px}
+.sub-criteria .slider{flex:1;accent-color:#ff6f00;height:6px;cursor:pointer}
+.sub-criteria .slider-value{min-width:52px;text-align:center;background:#1a237e;color:#fff;padding:4px 10px;border-radius:12px;font-weight:bold;font-size:14px}
+.sub-criteria .slider-minmax{font-size:12px;color:#999;min-width:18px;text-align:center}
 .num-btn{width:38px;height:38px;background:#e0e0e0;border:2px solid #bdbdbd;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold;font-size:14px;transition:all .12s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .num-btn:hover{background:#c5cae9}
 .num-btn:active{transform:scale(0.95)}
@@ -235,48 +239,53 @@ async function refreshOtherTotals(){
   }catch(e){}
 }
 
+const TOTAL_COLORS=["#e65100","#1565c0","#2e7d32","#6a1b9a","#c2185b","#00838f","#4527a0","#ef6c00","#283593","#ad1457","#00695c","#4e342e"];
+function totalColor(idx){return TOTAL_COLORS[idx % TOTAL_COLORS.length];}
 function buildModels(){
   const c=document.getElementById("modelsContainer");
   c.innerHTML=MODELS.map((m,idx)=>{
+    const tc=totalColor(idx);
     let h='';
     CRITERIA.forEach(crit=>{
       h+=`<div class="criteria"><div class="criteria-title">${crit.title} <span class="max-points">(Tối đa ${crit.max} điểm)</span></div>`;
       crit.subs.forEach((sub,si)=>{
-        h+=`<div class="sub-criteria"><div class="label">${sub.label} <span style="color:#999">(max ${sub.max} điểm)</span></div><div class="stars">${starsHTML(`m${idx}_c${crit.id}_s${si}`,sub.max)}</div></div>`;
+        const key=`m${idx}_c${crit.id}_s${si}`;
+        const curVal = scores[idx]?.[crit.id]?.[si] ?? 0;
+        h+=`<div class="sub-criteria"><div class="label">${sub.label} <span style="color:#999">(max ${sub.max} điểm)</span></div>${sliderHTML(key,sub.max,curVal)}</div>`;
       });
       h+=`<div class="criteria-total">Tổng: <span id="csum_${idx}_${crit.id}">0</span>/${crit.max}</div></div>`;
     });
-    return`<div class="model-card" id="card_${idx}"><div class="model-header" onclick="toggleModel(${idx})"><div><span class="info">STT ${m.stt}. ${m.name}</span><br><span class="unit">${m.unit}</span></div><div class="total" id="mtotal_${idx}">0</div></div><div class="model-body" id="body_${idx}">${h}</div></div>`;
+    return`<div class="model-card" id="card_${idx}" style="border-left-color:${tc}"><div class="model-header" onclick="toggleModel(${idx})"><div><span class="info">STT ${m.stt}. ${m.name}</span><br><span class="unit">${m.unit}</span></div><div class="total" id="mtotal_${idx}" style="background:${tc}">0</div></div><div class="model-body" id="body_${idx}">${h}</div></div>`;
   }).join('');
 }
 
-function starsHTML(key,max){
-  let h='<div style="display:flex;gap:4px;flex-wrap:wrap">';
-  for(let i=0;i<=max;i++) h+=`<button type="button" class="num-btn" data-key="${key}" data-val="${i}" onclick="onNumClick(this)">${i}</button>`;
-  h+='</div>';
-  return h;
+function sliderHTML(key,max,val){
+  const v = val ?? 0;
+  return `<div class="slider-wrap"><span class="slider-minmax">0</span><input type="range" class="slider" data-key="${key}" min="0" max="${max}" step="0.5" value="${v}" oninput="onSliderInput(this)"><span class="slider-minmax">${max}</span><span class="slider-value" id="val_${key}">${formatVal(v)}</span></div>`;
 }
-function onNumClick(btn){
-  const key=btn.dataset.key, val=+btn.dataset.val;
+function formatVal(v){ return Number.isInteger(+v) ? String(parseInt(v)) : String(+v); }
+function onSliderInput(el){
+  const key=el.dataset.key, val=parseFloat(el.value);
   const p=key.match(/m(\d+)_c(\d+)_s(\d+)/);
   const mi=+p[1],ci=+p[2],si=+p[3];
   if(!scores[mi])scores[mi]={};
   if(!scores[mi][ci])scores[mi][ci]={};
   scores[mi][ci][si]=val;
-  document.querySelectorAll(`.num-btn[data-key="${key}"]`).forEach(b=>{
-    b.classList.toggle('active', +b.dataset.val===val);
-  });
+  const out=document.getElementById(`val_${key}`);
+  if(out) out.textContent=formatVal(val);
   updateSums(mi,ci);
   persistScores();
 }
-
 function setScore(key,val){
   const p=key.match(/m(\d+)_c(\d+)_s(\d+)/);
   const mi=+p[1],ci=+p[2],si=+p[3];
   if(!scores[mi])scores[mi]={};
   if(!scores[mi][ci])scores[mi][ci]={};
   scores[mi][ci][si]=val;
-  document.querySelectorAll(`.num-btn[data-key="${key}"]`).forEach(b=> b.classList.toggle('active', +b.dataset.val===val));
+  const el=document.querySelector(`.slider[data-key="${key}"]`);
+  if(el) el.value=val;
+  const out=document.getElementById(`val_${key}`);
+  if(out) out.textContent=formatVal(val);
   updateSums(mi,ci);
   persistScores();
 }
@@ -286,11 +295,11 @@ function updateSums(mi,ci){
   let sum=0;
   c.subs.forEach((_,si)=>{sum+=(s[si]||0);});
   const se=document.getElementById(`csum_${mi}_${ci}`);
-  if(se)se.textContent=sum;
+  if(se)se.textContent=Number.isInteger(sum)?sum:sum.toFixed(1);
   let total=0;
   CRITERIA.forEach(c2=>{const s2=scores[mi]?.[c2.id]||{};c2.subs.forEach((_,si2)=>{total+=(s2[si2]||0);});});
   const te=document.getElementById(`mtotal_${mi}`);
-  if(te)te.textContent=total;
+  if(te)te.textContent=Number.isInteger(total)?total:total.toFixed(1);
 }
 
 function toggleModel(idx){
@@ -301,12 +310,44 @@ function persistScores(){
   try{localStorage.setItem(SK(currentJudge),JSON.stringify(scores));}catch(e){}
 }
 
-function loadScores(){
-  try{
-    const saved=localStorage.getItem(SK(currentJudge));
-    scores=saved?JSON.parse(saved):{};
-  }catch(e){scores={}}
+async function loadScores(){
+  // Ưu tiên Supabase -> khớp khi F5, fallback localStorage
+  let loadedFromSupabase = false;
+  if(config){
+    try{
+      const r = await fetch(`${config.url}/rest/v1/diem_trung_thu_2026?nguoi_cham=eq.${currentJudge}&select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r.ok){
+        const rows = await r.json();
+        if(rows && rows.length){
+          const mapped = {};
+          rows.forEach(row=>{
+            const idx = MODELS.findIndex(m=>m.stt===row.stt);
+            if(idx===-1) return;
+            mapped[idx]={
+              1:{0:parseFloat(row.diem_c1_s1)||0,1:parseFloat(row.diem_c1_s2)||0,2:parseFloat(row.diem_c1_s3)||0},
+              2:{0:parseFloat(row.diem_c2_s1)||0,1:parseFloat(row.diem_c2_s2)||0,2:parseFloat(row.diem_c2_s3)||0},
+              3:{0:parseFloat(row.diem_c3_s1)||0,1:parseFloat(row.diem_c3_s2)||0,2:parseFloat(row.diem_c3_s3)||0},
+              4:{0:parseFloat(row.diem_c4_s1)||0,1:parseFloat(row.diem_c4_s2)||0,2:parseFloat(row.diem_c4_s3)||0},
+              5:{0:parseFloat(row.diem_c5_s1)||0,1:parseFloat(row.diem_c5_s2)||0}
+            };
+          });
+          if(Object.keys(mapped).length){
+            scores = mapped;
+            try{localStorage.setItem(SK(currentJudge),JSON.stringify(scores));}catch(e){}
+            loadedFromSupabase = true;
+          }
+        }
+      }
+    }catch(e){}
+  }
+  if(!loadedFromSupabase){
+    try{
+      const saved=localStorage.getItem(SK(currentJudge));
+      scores=saved?JSON.parse(saved):{};
+    }catch(e){scores={}}
+  }
   refreshUI();
+  if(loadedFromSupabase) buildTabs();
 }
 
 function refreshUI(){
@@ -316,16 +357,20 @@ function refreshUI(){
       let cs=0;
       crit.subs.forEach((_,si)=>{cs+=(s[si]||0);});
       const se=document.getElementById(`csum_${idx}_${crit.id}`);
-      if(se)se.textContent=cs;
+      if(se)se.textContent=Number.isInteger(cs)?cs:cs.toFixed(1);
       crit.subs.forEach((_,si)=>{
         const val=s[si]||0;
-        document.querySelectorAll(`.num-btn[data-key="m${idx}_c${crit.id}_s${si}"]`).forEach(b=> b.classList.toggle('active', +b.dataset.val===val));
+        const key=`m${idx}_c${crit.id}_s${si}`;
+        const el=document.querySelector(`.slider[data-key="${key}"]`);
+        if(el) el.value=val;
+        const out=document.getElementById(`val_${key}`);
+        if(out) out.textContent=formatVal(val);
       });
     });
     let total=0;
     CRITERIA.forEach(crit=>{const s=scores[idx]?.[crit.id]||{};crit.subs.forEach((_,si)=>{total+=(s[si]||0);});});
     const te=document.getElementById(`mtotal_${idx}`);
-    if(te)te.textContent=total;
+    if(te)te.textContent=Number.isInteger(total)?total:total.toFixed(1);
   });
 }
 
