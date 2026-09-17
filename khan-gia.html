@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Khán giả - Mô hình Trung thu 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
+.header{background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 30%,#b45309 70%,#f59e0b 100%);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 20px rgba(127,29,29,.25);border-bottom:3px solid #fbbf24}
+.header h1{font-size:20px;text-shadow:0 1px 2px rgba(0,0,0,.25);color:#fffef7}
+.judge-badge{background:#fbbf24;color:#7f1d1d;padding:6px 16px;border-radius:20px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.15);border:1px solid #fde68a}
+.container{max-width:1400px;margin:0 auto;padding:16px}
+.config-bar{background:#fffbeb;border:2px dashed #fbbf24;padding:12px 16px;margin-bottom:16px;border-radius:8px;display:none}
+.config-bar.visible{display:block}
+.config-bar label{font-weight:bold;margin-right:8px;font-size:14px}
+.config-bar input{width:300px;padding:4px 8px;margin:4px;border:1px solid #fde68a;border-radius:4px;font-size:14px}
+.config-bar button{padding:6px 14px;background:#991b1b;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-left:8px;font-size:14px}
+.config-bar button:hover{background:#7f1d1d}
+.model-card{background:#fff;border-radius:14px;margin-bottom:16px;box-shadow:0 4px 16px rgba(127,29,29,.08);overflow:hidden;border:1px solid #fde68a}
+.model-header{background:linear-gradient(135deg,#fef2f2 0%,#fffbeb 100%);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;border-bottom:1px solid #fef3c7}
+.model-header:hover{background:linear-gradient(135deg,#fee2e2 0%,#fef3c7 100%)}
+.model-header .info{font-size:16px;font-weight:bold}
+.model-header .unit{color:#555;font-size:14px}
+.model-header .total{color:#7f1d1d;padding:6px 14px;border-radius:12px;font-weight:bold;min-width:56px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06);font-size:15px;border:1px solid #fde68a;background:#fffbeb}
+.model-card{border-left:5px solid transparent}
+.model-body{padding:16px;display:none;background:#fffef7}
+.model-body.open{display:block}
+.criteria{margin-bottom:16px}
+.criteria-title{background:linear-gradient(135deg,#991b1b 0%,#b91c1c 60%,#d97706 100%);color:#fff;padding:8px 12px;border-radius:8px;font-weight:bold;margin-bottom:8px;font-size:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;box-shadow:0 2px 8px rgba(127,29,29,.2)}
+.criteria-title .max-points{font-weight:normal;opacity:.9;white-space:nowrap}
+.sub-criteria{margin-left:16px;margin-bottom:8px}
+.sub-criteria .label{font-size:14px;color:#57534e;margin-bottom:4px;line-height:1.4}
+.sub-criteria .slider-wrap{display:flex;align-items:center;gap:10px}
+.sub-criteria .slider{flex:1;accent-color:#b91c1c;height:6px;cursor:pointer}
+.sub-criteria .slider-value{min-width:52px;text-align:center;background:#991b1b;color:#fff;padding:4px 10px;border-radius:12px;font-weight:bold;font-size:14px;box-shadow:0 2px 6px rgba(127,29,29,.25)}
+.sub-criteria .slider-minmax{font-size:12px;color:#999;min-width:18px;text-align:center}
+.num-btn{width:38px;height:38px;background:#fff;border:2px solid #fde68a;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:bold;font-size:14px;transition:all .12s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;color:#991b1b}
+.num-btn:hover{background:#fef3c7;border-color:#fbbf24}
+.num-btn:active{transform:scale(0.95)}
+.num-btn.active{background:#991b1b!important;border-color:#7f1d1d!important;color:#fff!important;box-shadow:0 2px 8px rgba(127,29,29,.3)}
+.criteria-total{text-align:right;font-size:18px;font-weight:bold;color:#991b1b;margin-top:8px;padding-top:8px;border-top:2px solid #fde68a}
+.btn-save{background:linear-gradient(135deg,#991b1b,#d97706);color:#fff;padding:12px 32px;border:none;border-radius:12px;font-size:16px;cursor:pointer;display:block;margin:16px auto;box-shadow:0 4px 16px rgba(127,29,29,.25);font-weight:700;border:1px solid #fbbf24}
+.btn-save:hover{filter:brightness(1.1)}
+.btn-save:disabled{background:#fde68a;cursor:not-allowed;box-shadow:none;color:#92400e}
+.status-bar{padding:10px 16px;margin-top:8px;border-radius:4px;display:none;text-align:center;font-size:14px}
+.status-bar.success{background:#e8f5e9;color:#2e7d32;display:block}
+.status-bar.error{background:#ffebee;color:#c62828;display:block}
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab-btn{padding:10px 14px;background:#fef3c7;border:none;border-radius:10px 10px 0 0;cursor:pointer;font-weight:bold;font-size:14px;min-height:44px;color:#7f1d1d;border:1px solid #fde68a}
+.tab-btn.active{background:linear-gradient(135deg,#991b1b,#b91c1c)!important;color:#fff!important;box-shadow:0 -2px 8px rgba(127,29,29,.15);border-color:#7f1d1d}
+.summary-wrap{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(127,29,29,.08);overflow:hidden;border:1px solid #fde68a}
+.summary-head{padding:14px 16px;background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 40%,#b45309 75%,#f59e0b 100%);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:2px solid #fbbf24}
+.summary-head h2{font-size:17px;text-shadow:0 1px 2px rgba(0,0,0,.2)}
+.summary-head button{padding:6px 14px;border:none;border-radius:8px;background:#fff;color:#991b1b;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);border:1px solid #fde68a}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.summary-table{width:100%;border-collapse:collapse;min-width:760px;font-size:14px;table-layout:auto}
+.summary-table th{background:#fef2f2;color:#7f1d1d;padding:10px 8px;text-align:center;white-space:nowrap;font-size:13px;border-bottom:2px solid #fde68a}
+.summary-table td{padding:9px 8px;border-bottom:1px solid #eee;text-align:center;vertical-align:middle;white-space:normal;word-break:normal;overflow-wrap:break-word}
+.summary-table td:nth-child(1){white-space:nowrap;vertical-align:middle}
+.summary-table td:nth-child(2){text-align:center;white-space:nowrap;vertical-align:middle}
+.summary-table td:nth-child(3){text-align:left;min-width:160px;max-width:220px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.35;vertical-align:middle}
+.summary-table td:nth-child(4){text-align:left;min-width:120px;max-width:160px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.3;vertical-align:middle}
+.summary-table tr:nth-child(even){background:#fafbff}
+.rank-1{background:linear-gradient(90deg,#fff8e1,#ffecb3)!important;font-weight:bold}
+.rank-2{background:#f3e5f5!important}
+.rank-3{background:#e3f2fd!important}
+.badge{display:inline-block;min-width:28px;padding:3px 8px;border-radius:12px;color:#fff;font-weight:bold;font-size:13px;white-space:nowrap;vertical-align:middle}
+.badge-1{background:#ff6f00}
+.badge-2{background:#8e24aa}
+.badge-3{background:#1565c0}
+.vote-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.vote-card{background:#fff;border-radius:14px;box-shadow:0 4px 12px rgba(127,29,29,.08);overflow:hidden;border-left:5px solid #ccc;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;min-width:0;border-top:1px solid #fde68a;border-right:1px solid #fde68a;border-bottom:1px solid #fde68a}
+.vote-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(127,29,29,.12)}
+.vote-card-head{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;background:linear-gradient(180deg,#fffbeb 0%,#ffffff 100%)}
+.vote-card-head>div:first-child{flex:1 1 160px;min-width:0}
+.vote-card-head .v-info{font-weight:bold;font-size:15px;color:#7f1d1d;word-break:normal;overflow-wrap:break-word;white-space:normal;line-height:1.35}
+.vote-card-head .v-unit{font-size:13px;color:#92400e;word-break:normal;overflow-wrap:break-word;white-space:normal;line-height:1.3;opacity:.9}
+.vote-card-body{padding:0 14px 12px;flex:1}
+.vote-count{font-size:13px;color:#607d8b;margin-bottom:8px}
+.vote-btn{width:100%;padding:11px;border:1px solid #cfd8dc;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;background:#eceff1;color:#37474f;box-shadow:none;transition:background .15s,transform .1s}
+.vote-btn:hover{background:#e0e7ec;border-color:#b0bec5}
+.vote-btn:active{transform:scale(.98)}
+.vote-btn:disabled{background:#f5f5f5!important;color:#b0bec5!important;border-color:#eceff1!important;box-shadow:none;cursor:not-allowed}
+.vote-btn.voted{background:#e8f5e9!important;color:#2e7d32!important;border-color:#a5d6a7!important;box-shadow:none}
+.vote-banner{padding:12px 16px;border-radius:12px;margin-bottom:14px;text-align:center;font-weight:bold;backdrop-filter:blur(4px);box-shadow:0 2px 12px rgba(127,29,29,.08)}
+.vote-banner.locked{background:linear-gradient(135deg,#fef2f2 0%,#fffbeb 100%);color:#7f1d1d;border:1px solid #fde68a;position:sticky;top:8px;z-index:5}
+.vote-banner.open{background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);color:#92400e;border:1px solid #fcd34d;position:sticky;top:8px;z-index:5}
+.vote-top-status{position:sticky;top:58px;z-index:4;margin-bottom:10px}
+.vote-top-status:empty{display:none}
+#dudoanContainer{max-width:100%;overflow:hidden}
+#dudoanContainer .vote-grid{max-width:100%}
+.vote-modal-overlay{position:fixed;inset:0;background:rgba(38,50,56,.45);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.vote-modal-overlay.open{display:flex}
+.vote-modal{background:#fff;border-radius:18px;box-shadow:0 16px 40px rgba(0,0,0,.18);max-width:420px;width:100%;overflow:hidden;animation:modalPop .2s ease}
+@keyframes modalPop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.vote-modal-head{padding:18px 20px 0;text-align:center}
+.vote-modal-icon{width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,#991b1b,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 12px rgba(127,29,29,.25)}
+.vote-modal-title{font-size:18px;font-weight:800;color:#37474f;margin-bottom:4px}
+.vote-modal-sub{font-size:13px;color:#78909c}
+.vote-modal-body{padding:14px 20px}
+.vote-modal-card{border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(0,0,0,.06)}
+.vote-modal-card .vm-name{font-weight:700;color:#37474f;font-size:15px}
+.vote-modal-card .vm-unit{font-size:12px;color:#607d8b}
+.vote-modal-note{margin-top:10px;font-size:12px;color:#e65100;background:#fff3e0;border:1px solid #ffcc80;border-radius:8px;padding:8px 10px;text-align:center}
+.vote-sdt-wrap{margin-top:10px}
+.vote-sdt-input{width:100%;padding:10px 12px;border:1px solid #cfd8dc;border-radius:10px;font-size:15px;text-align:center;letter-spacing:1px}
+.vote-sdt-input:focus{outline:none;border-color:#991b1b;box-shadow:0 0 0 3px rgba(127,29,29,.12)}
+.vote-sdt-input.err{border-color:#e53935;box-shadow:0 0 0 3px rgba(229,57,53,.12)}
+.vote-sdt-hint{font-size:11px;color:#78909c;margin-top:4px;text-align:center}
+.vote-modal-actions{display:flex;gap:10px;padding:14px 20px 20px}
+.vote-modal-btn{flex:1;padding:11px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:none;transition:filter .15s,transform .1s}
+.vote-modal-btn:active{transform:scale(.98)}
+.vote-modal-btn.cancel{background:#eceff1;color:#546e7a;border:1px solid #cfd8dc}
+.vote-modal-btn.cancel:hover{background:#e0e7ec}
+.vote-modal-btn.confirm{background:linear-gradient(135deg,#991b1b,#d97706);color:#fff;box-shadow:0 4px 12px rgba(127,29,29,.25);border:1px solid #fbbf24}
+.vote-modal-btn.confirm:hover{filter:brightness(1.1)}
+@media(max-width:600px){
+ body{font-size:16px}
+ .header{padding:12px 14px;flex-direction:column;gap:8px;text-align:center}
+ .header h1{font-size:18px}
+ .judge-badge{font-size:15px;padding:6px 14px}
+ .container{padding:10px}
+ .tab-bar{gap:6px}
+ .tab-btn{font-size:15px;padding:10px 12px;flex:1 1 auto;text-align:center}
+ .model-header{padding:14px}
+ .model-header .info{font-size:17px}
+ .model-header .unit{font-size:15px}
+ .model-body{padding:12px}
+ .criteria-title{font-size:16px;padding:10px 12px;flex-wrap:wrap}
+ .sub-criteria .label{font-size:15px;line-height:1.5}
+ .num-btn{width:40px;height:40px;font-size:15px}
+ .criteria-total{font-size:17px}
+ .btn-save{font-size:18px;padding:14px 28px;width:92%;max-width:360px}
+  .config-bar input{width:100%;font-size:16px;padding:8px}
+   .summary-table{font-size:13px;min-width:680px}
+   .vote-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+   .vote-card{border-radius:10px;min-width:0;overflow:hidden}
+   .vote-card-head{padding:8px 10px;flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:6px}
+   .vote-card-head>div:first-child{flex:1 1 105px;min-width:0}
+   .vote-card-head .v-info{font-size:13px;line-height:1.35;word-break:normal;overflow-wrap:break-word;white-space:normal;overflow:visible;display:block}
+   .vote-card-head .v-unit{font-size:11px;word-break:normal;overflow-wrap:break-word;white-space:normal;line-height:1.3}
+   .vote-card-head .total{font-size:12px!important;min-width:40px!important;padding:3px 8px!important;flex-shrink:0;white-space:nowrap}
+   .vote-card-body{padding:0 8px 8px;min-width:0}
+   .vote-count{font-size:11px;word-break:normal;overflow-wrap:break-word;white-space:normal}
+   .vote-btn{font-size:13px;padding:8px;min-width:0;white-space:nowrap}
+   .vote-banner{font-size:13px;padding:10px 12px;word-break:normal;overflow-wrap:break-word;white-space:normal;line-height:1.4}
+   #dudoanContainer .vote-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+   #dudoanContainer .vote-card-head .v-info{font-size:13px}
+   #dudoanContainer .table-scroll{margin:0 -10px;padding:0 10px}
+   #dudoanContainer table{font-size:12px;min-width:460px;table-layout:auto}
+   #dudoanContainer table th{padding:6px 6px;white-space:nowrap;word-break:normal}
+   #dudoanContainer table td{padding:6px 6px;white-space:normal;word-break:normal;overflow-wrap:break-word;vertical-align:middle;line-height:1.35}
+   #dudoanContainer table td:nth-child(1){white-space:nowrap;text-align:center}
+   #dudoanContainer table td:nth-child(3){min-width:110px;max-width:150px;text-align:center}
+   #dudoanContainer .vote-banner,#dudoanContainer .vote-top-status{position:relative;top:auto;z-index:auto}
+   #dudoanContainer .vote-banner{margin-bottom:10px}
+   #dudoanContainer .vote-card{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+ }
+.desktop-popup-overlay{position:fixed;inset:0;background:rgba(20,30,70,.55);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:10000;padding:16px}
+.desktop-popup-overlay.open{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.desktop-popup{background:#fff;border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);max-width:380px;width:100%;overflow:hidden;animation:modalPop .25s ease;text-align:center}
+.desktop-popup-icon{width:72px;height:72px;margin:0 auto;background:linear-gradient(135deg,#991b1b,#f59e0b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 20px rgba(127,29,29,.2)}
+.desktop-popup-head{padding:24px 20px 0}
+.desktop-popup-title{font-size:18px;font-weight:800;color:#1e293b;margin:12px 0 6px}
+.desktop-popup-sub{font-size:13px;color:#64748b;line-height:1.5;padding:0 4px}
+.desktop-popup-note{margin:14px 20px 0;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:12px;color:#475569;display:flex;align-items:center;gap:8px;justify-content:center}
+.desktop-popup-actions{padding:16px 20px 20px;display:flex;gap:10px}
+.desktop-popup-btn{flex:1;padding:12px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;border:none;transition:filter .15s,transform .1s}
+.desktop-popup-btn:active{transform:scale(.98)}
+.desktop-popup-btn.primary{background:linear-gradient(135deg,#991b1b,#d97706);color:#fff;box-shadow:0 6px 16px rgba(127,29,29,.25);border:1px solid #fbbf24}
+.desktop-popup-btn.primary:hover{filter:brightness(1.07)}
+.desktop-popup-btn.ghost{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+.audience-wrap{max-width:520px;margin:16px auto;background:#fff;border-radius:20px;box-shadow:0 12px 32px rgba(127,29,29,.12);overflow:hidden;border:1px solid #fde68a}
+.audience-head{padding:22px 20px 16px;text-align:center;background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 35%,#b45309 70%,#f59e0b 100%);color:#fff;border-bottom:3px solid #fbbf24}
+.audience-head .a-icon{width:64px;height:64px;margin:0 auto 10px;background:rgba(255,255,255,.2);backdrop-filter:blur(6px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid rgba(255,255,255,.3)}
+.audience-head h2{font-size:19px;font-weight:800;margin-bottom:4px}
+.audience-head p{font-size:13px;opacity:.9;line-height:1.4}
+.audience-body{padding:18px 20px 20px}
+.audience-field{margin-bottom:12px}
+.audience-field label{font-size:13px;font-weight:700;color:#334155;display:block;margin-bottom:6px}
+.audience-field input,.audience-field select{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.audience-field input:focus,.audience-field select:focus{outline:none;border-color:#991b1b;box-shadow:0 0 0 3px rgba(127,29,29,.12)}
+.audience-field input.err,.audience-field select.err{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+.audience-hint{font-size:11px;color:#94a3b8;margin-top:4px}
+.audience-actions{margin-top:16px}
+.audience-btn{width:100%;padding:13px;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#991b1b,#d97706);color:#fff;box-shadow:0 8px 20px rgba(127,29,29,.25);transition:filter .15s,transform .1s;border:1px solid #fbbf24}
+.audience-btn:active{transform:scale(.98)}
+.audience-btn:hover{filter:brightness(1.07)}
+.audience-btn:disabled{opacity:.6;cursor:not-allowed;filter:none;transform:none}
+.audience-foot{margin-top:10px;text-align:center;font-size:12px;color:#94a3b8}
+.audience-badge{margin:0 20px 14px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:8px 12px;font-size:12px;color:#475569;text-align:center}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🎯 Mô hình Trung Thu 2026</h1>
+  <div class="judge-badge" id="judgeName">Giám khảo</div>
+</div>
+<div class="container">
+  <div class="config-bar" id="configBar" style="display:none">
+    <input type="hidden" id="supabaseUrl">
+    <input type="hidden" id="supabaseKey">
+  </div>
+  <div class="tab-bar" id="tabBar"></div>
+  <div id="audienceEntry" style="display:none"></div>
+  <!-- modelsContainer removed for khan-gia -->
+  <!-- summaryContainer removed for khan-gia -->
+  <div id="voteContainer" style="display:none"></div>
+  <div id="dudoanContainer" style="display:none"></div>
+  <!-- saveBtn removed for khan-gia -->
+  <div class="status-bar" id="statusBar"></div>
+</div>
+<!-- Popup xác nhận bình chọn đẹp -->
+<div class="vote-modal-overlay" id="voteModal" onclick="if(event.target===this) closeVoteModal()">
+  <div class="vote-modal">
+    <div class="vote-modal-head">
+      <div class="vote-modal-icon">💖</div>
+      <div class="vote-modal-title">Bạn có chắc chắn không?</div>
+      <div class="vote-modal-sub">Chọn một linh vật mà bạn yêu thích nhất nhé</div>
+    </div>
+    <div class="vote-modal-body">
+      <div class="vote-modal-card" id="voteModalCard"></div>
+      <div class="vote-sdt-wrap">
+        <input id="voteSdtInput" class="vote-sdt-input" type="tel" inputmode="numeric" maxlength="11" placeholder="Nhập SĐT để nhận thưởng (VD: 098...)">
+        <div class="vote-sdt-hint">SDT dùng để trao thưởng khi bạn đoán/bình chọn trúng — không hiển thị công khai</div>
+      </div>
+      <div class="vote-modal-note">⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu</div>
+    </div>
+    <div class="vote-modal-actions">
+      <button class="vote-modal-btn cancel" onclick="closeVoteModal()">Hủy</button>
+      <button class="vote-modal-btn confirm" id="voteModalConfirm" onclick="confirmVote()">Xác nhận chọn</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup desktop - vui lòng dùng điện thoại -->
+<div class="desktop-popup-overlay" id="desktopPopup" onclick="if(event.target===this) closeDesktopPopup()">
+  <div class="desktop-popup">
+    <div class="desktop-popup-head">
+      <div class="desktop-popup-icon">📱</div>
+      <div class="desktop-popup-title">Vui lòng sử dụng điện thoại nhé!</div>
+      <div class="desktop-popup-sub">Trang bình chọn & dự đoán được tối ưu cho màn hình điện thoại.<br>Bạn đang dùng máy tính — giao diện có thể không hiển thị đẹp nhất.</div>
+    </div>
+    <div class="desktop-popup-note">💡 Mẹo: Mở bằng điện thoại để quét QR & thao tác mượt hơn</div>
+    <div class="desktop-popup-actions">
+      <button class="desktop-popup-btn ghost" onclick="closeDesktopPopup(true)">Đã hiểu</button>
+      <button class="desktop-popup-btn primary" onclick="closeDesktopPopup(true)">Tiếp tục xem</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODELS=[
+{stt:1,name:"Vó Ngựa Phù Đổng",unit:"Thôn Mậu A 1"},
+{stt:2,name:"Ngôi Sao",unit:"Thôn Mậu A 2"},
+{stt:3,name:"Thỏ Ngọc Trông Trăng",unit:"Thôn Mậu A 3"},
+{stt:4,name:"Thỏ Vàng Khát Vọng",unit:"Thôn Mậu A 5"},
+{stt:5,name:"Đèn Kéo Quân",unit:"Thôn Mậu A 6"},
+{stt:6,name:"Ánh trăng miền Quế",unit:"Trường Mầm Non Mậu A 1"},
+{stt:7,name:"Phượng hoàng chẩy hội",unit:"Trường Mầm Non Mậu A 2"},
+{stt:8,name:"Ánh trăng rằm bản em",unit:"Trường Mầm non Sơn Ca"},
+{stt:9,name:"Tết trung thu - trăng sáng trên thác khe cam",unit:"Tiểu học Mậu A 1"},
+{stt:10,name:"Chú cuội bên gốc cây đa",unit:"Tiểu học Mậu A 2"},
+{stt:11,name:"Mái chùa đón trăng",unit:"Trường THCS Mậu A 2"},
+{stt:12,name:"Thiên Mã Đón Trăng",unit:"Trường THCS Mậu A 1"},
+{stt:13,name:"Trung thu vùng cao giữ gìn bản sắc thắp sáng ước mơ",unit:"Thôn Ngòi A 3"},
+{stt:14,name:"Ngôi Sao",unit:"Thôn An Thịnh 1"},
+{stt:15,name:"Cá Chép",unit:"Thôn An Thịnh 2"},
+{stt:16,name:"Mặt trăng rằm tháng 8",unit:"Thôn An Thịnh 3"},
+{stt:17,name:"Cá Chép",unit:"Thôn An Thịnh 4"},
+{stt:18,name:"Thỏ Ngọc Cung Trăng",unit:"Thôn An Thịnh 5"},
+{stt:19,name:"Nhà Sàn Bác Hồ",unit:"Thôn Mậu Đông 1"},
+{stt:20,name:"Cá Chép",unit:"Thôn Mậu Đông 2"},
+{stt:21,name:"Đèn ông sao và đèn kéo quân",unit:"Trường THPH Chu Văn An"},
+{stt:22,name:"Đèn Lồng Trung Thu",unit:"Trường PTDTNT THCS&THPT"},
+{stt:23,name:"Nhà sàn, con đường và linh vật thỏ ngọc",unit:"Thôn Yên Thái 2"},
+{stt:24,name:"Trăng thu đất việt",unit:"Trường Mầm Non Ban Mai"},
+{stt:25,name:"Cá Chép",unit:"Trường THPH Lương Bằng"},
+{stt:26,name:"Cá Chép",unit:"Thôn Ngòi A 1"},
+{stt:27,name:"Đón trăng về bản",unit:"Thôn Yên Thái 1"}
+];
+
+const CRITERIA=[
+{id:1,title:"Ý tưởng sáng tạo, chủ đề, thông điệp (30 điểm)",max:30,
+ subs:[
+  {label:"1. Tính sáng tạo: thể hiện được tính độc đáo, mới lạ của ý tưởng mô hình hoặc linh vật",max:10},
+  {label:"2. Chủ đề: phù hợp với Tết Trung Thu, truyền tải được nét văn hóa dân gian.",max:10},
+  {label:"3. Thông điệp ý nghĩa: Mô hình hoặc linh vật mang thông điệp tích cực, truyền cảm hứng cho cộng đồng.",max:10}
+ ]},
+{id:2,title:"Kỹ thuật, mỹ thuật, kết cấu (25 điểm)",max:25,
+ subs:[
+  {label:"1. Kỹ thuật chế tác: Độ tinh xảo, chính xác trong các chi tiết, kỹ thuật thực hiện.",max:5},
+  {label:"2. Mỹ thuật tổng thể: Bố cục hài hòa, màu sắc bắt mắt, hình thức thẩm mỹ cao.",max:10},
+  {label:"3. Kết cấu vững chắc: Đảm bảo độ chắc chắn, an toàn khi di chuyển hoặc trưng bày; có khả năng sử dụng nhiều lần.",max:10}
+ ]},
+{id:3,title:"Chất liệu, thân thiện bảo vệ môi trường (20 điểm)",max:20,
+ subs:[
+  {label:"1. Chất liệu sử dụng: Ưu tiên vật liệu tự nhiên, vật liệu tái chế.",max:5},
+  {label:"2. An toàn cho người sử dụng: Không chứa chất độc hại, đảm bảo sức khỏe cộng đồng.",max:10},
+  {label:"3. Góp phần bảo vệ môi trường: Ý thức bảo vệ môi trường được lồng ghép vào mô hình hoặc linh vật.",max:5}
+ ]},
+{id:4,title:"Tính cộng đồng, đặc trưng bản sắc (15 điểm)",max:15,
+ subs:[
+  {label:"1. Đặc trưng vùng miền: Mô hình, linh vật mang dấu ấn bản sắc địa phương hoặc dân tộc.",max:5},
+  {label:"2. Tính lan tỏa cộng đồng: Khuyến khích sự tham gia, gắn kết của nhiều người.",max:5},
+  {label:"3. Giá trị nhân văn: Thúc đẩy tinh thần đoàn kết, chia sẻ, tôn vinh nét đẹp truyền thống.",max:5}
+ ]},
+{id:5,title:"Các thức biểu diễn thuyết trình (10 điểm)",max:10,
+ subs:[
+  {label:"1. Diễn diễn linh hoạt: Mô hình, linh vật dễ dàng di chuyển, trình diễn trước đám đông.",max:5},
+  {label:"2. Thuyết trình sinh động: Người trình bày có khả năng truyền đạt thông điệp, tạo sự hấp dẫn cho khán giả.",max:5}
+ ]}
+];
+
+const JUDGES=["loi","hieu","hung","loan","cuong"];
+const JN={loi:"Lợi",hieu:"Hiếu",hung:"Hùng",loan:"Loan",cuong:"Cường"};
+
+let currentJudge="loi";
+let scores={};
+let config=null;
+const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
+const SK=key=>`cd2026_${key}`;
+
+let isSummary=false;
+let isVote=false;
+let isDuDoan=false;
+const AUD_KEY='kg_info';
+function getAudienceInfo(){ try{ const v=localStorage.getItem(AUD_KEY); return v?JSON.parse(v):null;}catch(e){return null;} }
+function saveAudienceInfo(o){ try{ localStorage.setItem(AUD_KEY, JSON.stringify(o)); localStorage.setItem('saved_sdt', o.sdt); localStorage.setItem(SDT_STORAGE_KEY, o.sdt);}catch(e){} }
+function isAudienceHome(){ const p=new URLSearchParams(location.search); return !p.get('view') && !p.has('judge'); }
+function buildAudienceEntry(){
+  const c=document.getElementById('audienceEntry');
+  const info=getAudienceInfo()||{};
+  const thons=[...new Set(MODELS.map(m=>m.unit))].sort();
+  const thonOpts=['<option value="">-- Chọn thôn --</option>'].concat(thons.map(t=>`<option value="${t}" ${info.thon===t?'selected':''}>${t}</option>`)).join('') + '<option value="__khac">Khác (nhập tay)</option>';
+  const isKhac = info.thon && !thons.includes(info.thon);
+  c.innerHTML=`<div class="audience-wrap"><div class="audience-head"><div class="a-icon">🎉</div><h2>Chào mừng khán giả!</h2><p>Vui lòng nhập thông tin trước khi bình chọn & dự đoán<br>Chỉ mất 10 giây — thông tin dùng để trao thưởng</p></div><div class="audience-body"><div class="audience-field"><label>👤 Họ và tên <span style="color:#ef4444">*</span></label><input id="audTen" type="text" placeholder="VD: Nguyễn Văn A" value="${(info.ten||'').replace(/"/g,'&quot;')}"><div class="audience-hint">Nhập đầy đủ họ tên</div></div><div class="audience-field"><label>🏘️ Thôn / Đơn vị <span style="color:#ef4444">*</span></label><select id="audThonSel" onchange="onThonChange()">${thonOpts}</select><input id="audThonOther" type="text" placeholder="Nhập thôn của bạn" style="margin-top:8px;${isKhac?'':'display:none'}" value="${isKhac?(info.thon||'').replace(/"/g,'&quot;'):''}"><div class="audience-hint">Chọn thôn trong danh sách hoặc chọn “Khác”</div></div><div class="audience-field"><label>📱 Số điện thoại <span style="color:#ef4444">*</span></label><input id="audSdt" type="tel" inputmode="numeric" maxlength="11" placeholder="VD: 0987654321" value="${(info.sdt||'').replace(/"/g,'&quot;')}"><div class="audience-hint">10-11 số, bắt đầu bằng 0 — dùng để nhận thưởng</div></div><div class="audience-actions"><button class="audience-btn" onclick="submitAudienceInfo()">Tiếp tục → Bình chọn</button></div><div class="audience-foot">🔒 Thông tin chỉ dùng để trao thưởng, không chia sẻ công khai<br><span style="font-size:11px;color:#94a3b8">Đã có thông tin? Hệ thống sẽ ghi nhớ cho lần sau</span></div></div></div>`;
+  if(isKhac) document.getElementById('audThonSel').value='__khac';
+}
+function onThonChange(){ const sel=document.getElementById('audThonSel'); const other=document.getElementById('audThonOther'); if(sel.value==='__khac'){ other.style.display=''; other.focus(); } else { other.style.display='none'; } }
+function submitAudienceInfo(){
+  const tenEl=document.getElementById('audTen'); const sel=document.getElementById('audThonSel'); const other=document.getElementById('audThonOther'); const sdtEl=document.getElementById('audSdt');
+  let ten=tenEl.value.trim(); let thon=sel.value==='__khac'? other.value.trim() : sel.value.trim(); let sdt=sdtEl.value.trim();
+  let ok=true;
+  [tenEl, sel, sdtEl].forEach(el=>el.classList.remove('err')); other.classList.remove('err');
+  if(!ten){ tenEl.classList.add('err'); ok=false; }
+  if(!thon){ (sel.value==='__khac'?other:sel).classList.add('err'); ok=false; }
+  if(!/^0\d{9,10}$/.test(sdt)){ sdtEl.classList.add('err'); ok=false; }
+  if(!ok){ showStatus('⚠️ Vui lòng điền đầy đủ họ tên, thôn và SĐT hợp lệ','error'); const bar=document.getElementById('statusBar'); bar.style.display='block'; bar.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  saveAudienceInfo({ten, thon, sdt, ts:Date.now()});
+  showAudienceVote();
+}
+function buildAudienceTabs(active){
+  const bar=document.getElementById('tabBar');
+  const eActive=active==='entry'?'active':'';
+  const vActive=active==='vote'?'active':'';
+  const dActive=active==='dudoan'?'active':'';
+  bar.innerHTML=`<button class="tab-btn ${eActive}" onclick="showAudienceEntryTab()" style="background:${eActive?'#6366f1':'#fff'};color:${eActive?'#fff':'#6366f1'};border:1px solid #c7d2fe">📝 Thông tin</button><button class="tab-btn ${vActive}" onclick="showAudienceVote()" style="background:${vActive?'linear-gradient(135deg,#4db6ac,#00897b)':'#e0f2f1'};color:${vActive?'#fff':'#00695c'};border:1px solid #b2dfdb">🗳️ Bình chọn</button><button class="tab-btn ${dActive}" onclick="showAudienceDuDoan()" style="background:${dActive?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${dActive?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
+}
+function showAudienceEntryTab(){
+  document.getElementById('audienceEntry').style.display='';
+  document.getElementById('voteContainer').style.display='none';
+  document.getElementById('dudoanContainer').style.display='none';
+  document.getElementById('modelsContainer').style.display='none';
+  document.getElementById('summaryContainer').style.display='none';
+  document.getElementById('saveBtn').style.display='none';
+  document.getElementById('judgeName').textContent='🎉 Chào mừng khán giả';
+  buildAudienceEntry();
+  buildAudienceTabs('entry');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showAudienceVote(){
+  const info=getAudienceInfo();
+  if(!info || !info.ten || !info.thon || !/^0\d{9,10}$/.test(info.sdt)){ showAudienceEntryTab(); return; }
+  document.getElementById('audienceEntry').style.display='none';
+  document.getElementById('voteContainer').style.display='';
+  document.getElementById('dudoanContainer').style.display='none';
+  document.getElementById('modelsContainer').style.display='none';
+  document.getElementById('summaryContainer').style.display='none';
+  document.getElementById('saveBtn').style.display='none';
+  document.getElementById('judgeName').textContent='🗳️ Bình chọn khán giả';
+  buildAudienceTabs('vote');
+  loadConfig();
+  buildVoteUI();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showAudienceDuDoan(){
+  const info=getAudienceInfo();
+  if(!info || !info.ten || !info.thon || !/^0\d{9,10}$/.test(info.sdt)){ showAudienceEntryTab(); return; }
+  document.getElementById('audienceEntry').style.display='none';
+  document.getElementById('voteContainer').style.display='none';
+  document.getElementById('dudoanContainer').style.display='';
+  document.getElementById('modelsContainer').style.display='none';
+  document.getElementById('summaryContainer').style.display='none';
+  document.getElementById('saveBtn').style.display='none';
+  document.getElementById('judgeName').textContent='🔮 Dự đoán kết quả';
+  buildAudienceTabs('dudoan');
+  loadConfig();
+  buildDuDoanUI();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function init(){
+  // khan-gia.html: luôn ở chế độ khán giả
+  const audienceHome = true;
+  if(audienceHome){
+    const info=getAudienceInfo();
+    loadConfig();
+    if(info && info.ten && info.thon && info.sdt && /^0\d{9,10}$/.test(info.sdt)){
+      document.getElementById('audienceEntry').style.display='none';
+      document.getElementById('modelsContainer').style.display='none';
+      document.getElementById('summaryContainer').style.display='none';
+      document.getElementById('saveBtn').style.display='none';
+      document.getElementById('judgeName').textContent='🗳️ Bình chọn khán giả';
+      buildAudienceTabs('vote');
+      document.getElementById('voteContainer').style.display='';
+      document.getElementById('dudoanContainer').style.display='none';
+      buildVoteUI();
+    } else {
+      document.getElementById('modelsContainer').style.display='none';
+      document.getElementById('summaryContainer').style.display='none';
+      document.getElementById('voteContainer').style.display='none';
+      document.getElementById('dudoanContainer').style.display='none';
+      document.getElementById('saveBtn').style.display='none';
+      document.getElementById('judgeName').textContent='🎉 Chào mừng khán giả';
+      document.getElementById('audienceEntry').style.display='';
+      buildAudienceEntry();
+      buildAudienceTabs('entry');
+    }
+    return;
+  }
+  if(view==='tonghop'){ isSummary=true; }
+  if(view==='binhchon'){ isVote=true; }
+  if(view==='dudoan'){ isDuDoan=true; }
+  currentJudge=JUDGES.includes(getJudgeFromURL())?getJudgeFromURL():"loi";
+  if(isDuDoan) document.getElementById("judgeName").textContent="🔮 Dự đoán kết quả";
+  else if(isVote) document.getElementById("judgeName").textContent="🗳️ Bình chọn khán giả";
+  else document.getElementById("judgeName").textContent=isSummary?"📊 Tổng hợp điểm":"Giám khảo "+JN[currentJudge];
+  loadConfig();
+  buildTabs();
+  if(isDuDoan){
+    document.getElementById("modelsContainer").style.display="none";
+    document.getElementById("saveBtn").style.display="none";
+    document.getElementById("summaryContainer").style.display="none";
+    document.getElementById("voteContainer").style.display="none";
+    document.getElementById("dudoanContainer").style.display="";
+    buildDuDoanUI();
+  } else if(isVote){
+    document.getElementById("modelsContainer").style.display="none";
+    document.getElementById("saveBtn").style.display="none";
+    document.getElementById("summaryContainer").style.display="none";
+    document.getElementById("dudoanContainer").style.display="none";
+    document.getElementById("voteContainer").style.display="";
+    buildVoteUI();
+  } else {
+    document.getElementById("dudoanContainer").style.display="none";
+    buildModels();
+    loadScores();
+    if(isSummary){
+      document.getElementById("modelsContainer").style.display="none";
+      document.getElementById("saveBtn").style.display="none";
+      document.getElementById("voteContainer").style.display="none";
+      document.getElementById("summaryContainer").style.display="";
+      loadSummary();
+    }
+  }
+}
+
+function getJudgeFromURL(){return new URLSearchParams(window.location.search).get("judge")||"loi";}
+function buildTabs(){
+  const bar=document.getElementById("tabBar");
+  let h='';
+  JUDGES.forEach(j=>{
+    const isCurActive = j===currentJudge && !isSummary && !isVote && !isDuDoan;
+    const isCurLink = j===currentJudge;
+    let tot=0;
+    try{
+      const s=JSON.parse(localStorage.getItem(SK(j))||'{}');
+      Object.values(s).forEach(ms=> Object.values(ms).forEach(cs=> Object.values(cs).forEach(v=> tot+=+v||0)));
+    }catch(e){}
+    const label = tot>0 ? `GK ${JN[j]} <small style="opacity:.8;font-weight:normal">(${tot}đ)</small>` : `GK ${JN[j]}`;
+    if(isCurActive){
+      h+=`<button class="tab-btn active" style="background:#1a237e;color:#fff;box-shadow:0 2px 8px rgba(26,35,126,.35);transform:translateY(-1px)">${label}</button>`;
+    }else if(isCurLink && (isSummary||isVote||isDuDoan)){
+      h+=`<button class="tab-btn" onclick="switchJudge()" title="Quay lại chấm điểm" style="background:#e8eaf6;color:#1a237e;border:1px solid #9fa8da;cursor:pointer">${label}</button>`;
+    }else{
+      h+=`<button class="tab-btn" disabled title="Chỉ xem — link của ${JN[j]}" style="opacity:.6;cursor:not-allowed;background:#eceff1;color:#616161;border:1px solid #cfd8dc">${label}</button>`;
+    }
+  });
+  h+=`<button class="tab-btn ${isSummary?'active':''}" onclick="showSummary(this)" style="background:${isSummary?'#ff6f00':'#fff3e0'};color:${isSummary?'#fff':'#e65100'};border:1px solid #ffcc80">📊 Tổng hợp</button>`;
+  h+=`<button class="tab-btn ${isVote?'active':''}" onclick="showVote()" style="background:${isVote?'linear-gradient(135deg,#4db6ac,#00897b)':'#e0f2f1'};color:${isVote?'#fff':'#00695c'};border:1px solid #b2dfdb">🗳️ Bình chọn</button>`;
+  h+=`<button class="tab-btn ${isDuDoan?'active':''}" onclick="showDuDoan()" style="background:${isDuDoan?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${isDuDoan?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
+  bar.innerHTML=h;
+  refreshOtherTotals();
+}
+async function refreshOtherTotals(){
+  if(!config) return;
+  try{
+    const r=await fetch(`${config.url}/rest/v1/diem_trung_thu_2026?select=nguoi_cham,tong_diem`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(!r.ok) return;
+    const rows=await r.json();
+    const sums={}; rows.forEach(x=>{ sums[x.nguoi_cham]=(sums[x.nguoi_cham]||0)+(+x.tong_diem||0); });
+    const bar=document.getElementById("tabBar");
+    JUDGES.forEach((j,i)=>{
+      if(j===currentJudge) return;
+      const tot=sums[j];
+      if(tot==null) return;
+      const btn=bar.querySelectorAll('.tab-btn')[i];
+      if(btn) btn.innerHTML=`GK ${JN[j]} <small style="opacity:.8;font-weight:normal">(${tot}đ)</small>`;
+    });
+  }catch(e){}
+}
+
+const TOTAL_COLORS=["#FFD6E0","#FFE5B4","#FFFAC0","#C1E7B0","#B5E7FF","#D5C2FF","#FFC9B5","#B2E0D6","#F0E6D3","#E2F0CB","#C9DAF8","#FFDDE2"];
+function totalColor(idx){return TOTAL_COLORS[idx % TOTAL_COLORS.length];}
+function buildModels(){
+  const c=document.getElementById("modelsContainer");
+  c.innerHTML=MODELS.map((m,idx)=>{
+    const tc=totalColor(idx);
+    let h='';
+    CRITERIA.forEach(crit=>{
+      h+=`<div class="criteria"><div class="criteria-title">${crit.title} <span class="max-points">(Tối đa ${crit.max} điểm)</span></div>`;
+      crit.subs.forEach((sub,si)=>{
+        const key=`m${idx}_c${crit.id}_s${si}`;
+        const curVal = scores[idx]?.[crit.id]?.[si] ?? 0;
+        h+=`<div class="sub-criteria"><div class="label">${sub.label} <span style="color:#999">(max ${sub.max} điểm)</span></div>${sliderHTML(key,sub.max,curVal)}</div>`;
+      });
+      h+=`<div class="criteria-total">Tổng: <span id="csum_${idx}_${crit.id}">0</span>/${crit.max}</div></div>`;
+    });
+    return`<div class="model-card" id="card_${idx}" style="border-left-color:${tc}"><div class="model-header" onclick="toggleModel(${idx})"><div><span class="info">STT ${m.stt}. ${m.name}</span><br><span class="unit">${m.unit}</span></div><div class="total" id="mtotal_${idx}" style="background:${tc}">0</div></div><div class="model-body" id="body_${idx}">${h}</div></div>`;
+  }).join('');
+}
+
+function sliderHTML(key,max,val){
+  const v = val ?? 0;
+  return `<div class="slider-wrap"><span class="slider-minmax">0</span><input type="range" class="slider" data-key="${key}" min="0" max="${max}" step="0.5" value="${v}" oninput="onSliderInput(this)"><span class="slider-minmax">${max}</span><span class="slider-value" id="val_${key}">${formatVal(v)}</span></div>`;
+}
+function formatVal(v){ return Number.isInteger(+v) ? String(parseInt(v)) : String(+v); }
+function onSliderInput(el){
+  const key=el.dataset.key, val=parseFloat(el.value);
+  const p=key.match(/m(\d+)_c(\d+)_s(\d+)/);
+  const mi=+p[1],ci=+p[2],si=+p[3];
+  if(!scores[mi])scores[mi]={};
+  if(!scores[mi][ci])scores[mi][ci]={};
+  scores[mi][ci][si]=val;
+  const out=document.getElementById(`val_${key}`);
+  if(out) out.textContent=formatVal(val);
+  updateSums(mi,ci);
+  persistScores();
+}
+function setScore(key,val){
+  const p=key.match(/m(\d+)_c(\d+)_s(\d+)/);
+  const mi=+p[1],ci=+p[2],si=+p[3];
+  if(!scores[mi])scores[mi]={};
+  if(!scores[mi][ci])scores[mi][ci]={};
+  scores[mi][ci][si]=val;
+  const el=document.querySelector(`.slider[data-key="${key}"]`);
+  if(el) el.value=val;
+  const out=document.getElementById(`val_${key}`);
+  if(out) out.textContent=formatVal(val);
+  updateSums(mi,ci);
+  persistScores();
+}
+
+function updateSums(mi,ci){
+  const c=CRITERIA.find(x=>x.id===ci),s=scores[mi]?.[ci]||{};
+  let sum=0;
+  c.subs.forEach((_,si)=>{sum+=(s[si]||0);});
+  const se=document.getElementById(`csum_${mi}_${ci}`);
+  if(se)se.textContent=Number.isInteger(sum)?sum:sum.toFixed(1);
+  let total=0;
+  CRITERIA.forEach(c2=>{const s2=scores[mi]?.[c2.id]||{};c2.subs.forEach((_,si2)=>{total+=(s2[si2]||0);});});
+  const te=document.getElementById(`mtotal_${mi}`);
+  if(te)te.textContent=Number.isInteger(total)?total:total.toFixed(1);
+}
+
+function toggleModel(idx){
+  document.getElementById(`body_${idx}`).classList.toggle("open");
+}
+
+function persistScores(){
+  try{localStorage.setItem(SK(currentJudge),JSON.stringify(scores));}catch(e){}
+}
+
+async function loadScores(){
+  // Ưu tiên Supabase -> khớp khi F5, fallback localStorage
+  let loadedFromSupabase = false;
+  if(config){
+    try{
+      const r = await fetch(`${config.url}/rest/v1/diem_trung_thu_2026?nguoi_cham=eq.${currentJudge}&select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r.ok){
+        const rows = await r.json();
+        if(rows && rows.length){
+          const mapped = {};
+          rows.forEach(row=>{
+            const idx = MODELS.findIndex(m=>m.stt===row.stt);
+            if(idx===-1) return;
+            mapped[idx]={
+              1:{0:parseFloat(row.diem_c1_s1)||0,1:parseFloat(row.diem_c1_s2)||0,2:parseFloat(row.diem_c1_s3)||0},
+              2:{0:parseFloat(row.diem_c2_s1)||0,1:parseFloat(row.diem_c2_s2)||0,2:parseFloat(row.diem_c2_s3)||0},
+              3:{0:parseFloat(row.diem_c3_s1)||0,1:parseFloat(row.diem_c3_s2)||0,2:parseFloat(row.diem_c3_s3)||0},
+              4:{0:parseFloat(row.diem_c4_s1)||0,1:parseFloat(row.diem_c4_s2)||0,2:parseFloat(row.diem_c4_s3)||0},
+              5:{0:parseFloat(row.diem_c5_s1)||0,1:parseFloat(row.diem_c5_s2)||0}
+            };
+          });
+          if(Object.keys(mapped).length){
+            scores = mapped;
+            try{localStorage.setItem(SK(currentJudge),JSON.stringify(scores));}catch(e){}
+            loadedFromSupabase = true;
+          }
+        }
+      }
+    }catch(e){}
+  }
+  if(!loadedFromSupabase){
+    try{
+      const saved=localStorage.getItem(SK(currentJudge));
+      scores=saved?JSON.parse(saved):{};
+    }catch(e){scores={}}
+  }
+  refreshUI();
+  if(loadedFromSupabase) buildTabs();
+}
+
+function refreshUI(){
+  MODELS.forEach((m,idx)=>{
+    CRITERIA.forEach(crit=>{
+      const s=scores[idx]?.[crit.id]||{};
+      let cs=0;
+      crit.subs.forEach((_,si)=>{cs+=(s[si]||0);});
+      const se=document.getElementById(`csum_${idx}_${crit.id}`);
+      if(se)se.textContent=Number.isInteger(cs)?cs:cs.toFixed(1);
+      crit.subs.forEach((_,si)=>{
+        const val=s[si]||0;
+        const key=`m${idx}_c${crit.id}_s${si}`;
+        const el=document.querySelector(`.slider[data-key="${key}"]`);
+        if(el) el.value=val;
+        const out=document.getElementById(`val_${key}`);
+        if(out) out.textContent=formatVal(val);
+      });
+    });
+    let total=0;
+    CRITERIA.forEach(crit=>{const s=scores[idx]?.[crit.id]||{};crit.subs.forEach((_,si)=>{total+=(s[si]||0);});});
+    const te=document.getElementById(`mtotal_${idx}`);
+    if(te)te.textContent=Number.isInteger(total)?total:total.toFixed(1);
+  });
+}
+
+function switchJudge(j,btn){
+  if(!isSummary && !isVote && !isDuDoan) return;
+  persistScores();
+  isSummary=false; isVote=false; isDuDoan=false;
+  history.replaceState(null,'',`?judge=${currentJudge}`);
+  document.getElementById("judgeName").textContent="Giám khảo "+JN[currentJudge];
+  document.getElementById("modelsContainer").style.display="";
+  document.getElementById("summaryContainer").style.display="none";
+  document.getElementById("voteContainer").style.display="none";
+  document.getElementById("dudoanContainer").style.display="none";
+  document.getElementById("saveBtn").style.display="";
+  buildTabs();
+  loadScores();
+}
+function showSummary(btn){
+  if(isSummary) return;
+  persistScores();
+  isSummary=true; isVote=false; isDuDoan=false;
+  history.replaceState(null,'',`?view=tonghop`);
+  document.getElementById("judgeName").textContent="📊 Tổng hợp điểm";
+  document.getElementById("modelsContainer").style.display="none";
+  document.getElementById("saveBtn").style.display="none";
+  document.getElementById("voteContainer").style.display="none";
+  document.getElementById("dudoanContainer").style.display="none";
+  document.getElementById("summaryContainer").style.display="";
+  buildTabs();
+  loadSummary();
+}
+function showVote(){
+  if(isVote) return;
+  persistScores();
+  isVote=true; isSummary=false; isDuDoan=false;
+  history.replaceState(null,'',`?view=binhchon`);
+  document.getElementById("judgeName").textContent="🗳️ Bình chọn khán giả";
+  document.getElementById("modelsContainer").style.display="none";
+  document.getElementById("summaryContainer").style.display="none";
+  document.getElementById("dudoanContainer").style.display="none";
+  document.getElementById("saveBtn").style.display="none";
+  document.getElementById("voteContainer").style.display="";
+  buildTabs();
+  buildVoteUI();
+}
+function showDuDoan(){
+  if(isDuDoan) return;
+  persistScores();
+  isDuDoan=true; isSummary=false; isVote=false;
+  history.replaceState(null,'',`?view=dudoan`);
+  document.getElementById("judgeName").textContent="🔮 Dự đoán kết quả";
+  document.getElementById("modelsContainer").style.display="none";
+  document.getElementById("summaryContainer").style.display="none";
+  document.getElementById("voteContainer").style.display="none";
+  document.getElementById("saveBtn").style.display="none";
+  document.getElementById("dudoanContainer").style.display="";
+  buildTabs();
+  buildDuDoanUI();
+}
+// === Bình chọn khán giả: 1 điện thoại = 1 phiếu ===
+const VOTE_DEVICE_KEY='bc_device_id';
+const VOTE_DONE_KEY='da_binh_chon';
+function getDeviceId(){
+  let id=localStorage.getItem(VOTE_DEVICE_KEY);
+  if(!id){ id=crypto.randomUUID(); try{localStorage.setItem(VOTE_DEVICE_KEY,id);}catch(e){} }
+  return id;
+}
+async function buildVoteUI(){
+  const c=document.getElementById("voteContainer");
+  const done=localStorage.getItem(VOTE_DONE_KEY);
+  const doneDuDoan=localStorage.getItem(DUDOAN_DONE_KEY);
+  const counts=await fetchVoteCounts();
+  // đếm dự đoán để hiển thị kèm
+  let duDoanCounts={};
+  try{
+    const r=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){ const rows=await r.json(); rows.forEach(x=> duDoanCounts[x.stt_du_doan]=(duDoanCounts[x.stt_du_doan]||0)+1); }
+  }catch(e){}
+  let banner='';
+  const mVoted=done?MODELS.find(x=>String(x.stt)===String(done)):null;
+  const mDuDoan=doneDuDoan?MODELS.find(x=>String(x.stt)===String(doneDuDoan)):null;
+  if(done && doneDuDoan){
+    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn STT ${done}${mVoted?': '+mVoted.name:''} và dự đoán STT ${doneDuDoan}${mDuDoan?': '+mDuDoan.name:''} — mỗi loại 1 lần/ĐT</div>`;
+  } else if(done){
+    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn: STT ${done}. ${mVoted?mVoted.name:''} — bạn vẫn có thể dự đoán giải Nhất (1 lần)</div>`;
+  } else if(doneDuDoan){
+    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: STT ${doneDuDoan}. ${mDuDoan?mDuDoan.name:''} — bạn vẫn có thể bình chọn yêu thích (1 lần)</div>`;
+  } else {
+    banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích và 🔮 dự đoán 1 linh vật sẽ đạt giải Nhất — mỗi loại 1 lần/ĐT, SĐT để trao thưởng</div>`;
+  }
+  let html=banner+`<div class="vote-top-status"><div class="status-bar" id="voteStatus" style="display:none"></div><div class="status-bar" id="dudoanStatus" style="display:none"></div></div><div class="vote-grid">`;
+  MODELS.forEach((m,idx)=>{
+    const tc=totalColor(idx);
+    const soPhieu=counts[m.stt]||0;
+    const soDuDoan=duDoanCounts[m.stt]||0;
+    const isZero=soPhieu===0;
+    const badgeBg=isZero?'#eceff1':tc;
+    const badgeColor=isZero?'#78909c':'#37474f';
+    const cardBg=`linear-gradient(135deg, ${tc}55 0%, #ffffff 100%)`;
+    const countColor=isZero?'#90a4ae':'#37474f';
+    const isThisVoted=String(done)===String(m.stt);
+    const anyVoted=!!done;
+    const btnText=isThisVoted?'✅ Đã chọn':(anyVoted?'Đã khóa':'Bình chọn');
+    const btnClass=isThisVoted?'vote-btn voted':'vote-btn';
+    const dis=anyVoted?'disabled':'';
+    const isThisDuDoan=String(doneDuDoan)===String(m.stt);
+    const anyDuDoan=!!doneDuDoan;
+    const duDoanText=isThisDuDoan?'✅ Đã đoán':(anyDuDoan?'Đã khóa':'🔮 Dự đoán');
+    const duDoanClass=isThisDuDoan?'vote-btn voted':'vote-btn';
+    const dis2=anyDuDoan?'disabled':'';
+    const duDoanBadgeBg=soDuDoan===0?'#eceff1':'#ede9fe';
+    const duDoanBadgeColor=soDuDoan===0?'#78909c':'#5b21b6';
+    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div><div style="background:${duDoanBadgeBg};min-width:46px;text-align:center;padding:3px 8px;border-radius:10px;color:${duDoanBadgeColor};font-weight:bold;font-size:11px;border:1px solid ${soDuDoan===0?'#cfd8dc':'#ddd6fe'}">${soDuDoan} dự đoán</div></div></div><div class="vote-card-body"><div class="vote-count" style="color:${countColor}">Phiếu: <b>${soPhieu}</b> · Dự đoán: <b style="color:${soDuDoan? '#5b21b6':'#90a4ae'}">${soDuDoan}</b></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button><button class="${duDoanClass}" ${dis2} onclick="dudoan(${m.stt},this)" style="${isThisDuDoan?'':'background:#ede9fe;color:#5b21b6;border-color:#ddd6fe'}">${duDoanText}</button></div></div></div>`;
+  });
+  html+=`</div>`;
+  c.innerHTML=html;
+}
+async function fetchVoteCounts(){
+  if(!config) return {};
+  try{
+    // ưu tiên view thong_ke_binh_chon, fallback đếm trực tiếp bảng
+    let r=await fetch(`${config.url}/rest/v1/thong_ke_binh_chon?select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){
+      const rows=await r.json();
+      const map={}; rows.forEach(x=>map[x.stt]=x.so_phieu);
+      return map;
+    }
+    r=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia?select=stt`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){
+      const rows=await r.json();
+      const map={}; rows.forEach(x=>map[x.stt]=(map[x.stt]||0)+1);
+      return map;
+    }
+  }catch(e){}
+  return {};
+}
+let pendingVote=null;
+function openVoteModal(stt,btn){
+  const m=MODELS.find(x=>x.stt===stt);
+  const idx=MODELS.findIndex(x=>x.stt===stt);
+  const tc=totalColor(idx);
+  pendingVote={stt,btn};
+  const card=document.getElementById('voteModalCard');
+  card.innerHTML=`<div><div class="vm-name">STT ${m.stt}. ${m.name}</div><div class="vm-unit">${m.unit}</div></div><div style="background:${tc};color:#37474f;padding:6px 12px;border-radius:20px;font-weight:800;font-size:13px;border:1px solid rgba(0,0,0,.06)">STT ${m.stt}</div>`;
+  card.style.background=`linear-gradient(135deg, ${tc}66, #ffffff)`;
+  card.style.borderColor=tc;
+  document.getElementById('voteModal').classList.add('open');
+}
+function closeVoteModal(){
+  document.getElementById('voteModal').classList.remove('open');
+  pendingVote=null; pendingDuDoan=null;
+  // reset confirm button về vote mặc định để lần sau mở vote không bị kẹt dudoan
+  document.getElementById('voteModalConfirm').onclick=confirmVote;
+}
+async function vote(stt,btn){
+  const done=localStorage.getItem(VOTE_DONE_KEY);
+  if(done){ showVoteStatus('⚠️ Bạn đã bình chọn rồi — 1 điện thoại chỉ 1 phiếu','error'); return; }
+  if(!config){ showVoteStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
+  openVoteModal(stt,btn);
+  return;
+}
+async function confirmVote(){
+  if(!pendingVote) return;
+  const sdt=getSdtOrAlert();
+  if(!sdt) return;
+  const {stt,btn}=pendingVote;
+  closeVoteModal();
+  if(btn) { btn.disabled=true; btn.textContent='⏳ Đang gửi...'; }
+  try{
+    const device_id=getDeviceId();
+    const aud=getAudienceInfo();
+    let payload={stt:stt, device_id:device_id, voter_ip:null, user_agent:navigator.userAgent.substring(0,200), sdt:sdt};
+    if(aud){ payload.ho_ten=aud.ten; payload.thon=aud.thon; payload.ten=aud.ten; }
+    try{ const ipR=await fetch('https://api.ipify.org?format=json',{signal:AbortSignal.timeout(2000)}); if(ipR.ok){ const j=await ipR.json(); payload.voter_ip=j.ip; } }catch(e){}
+    let r=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payload)});
+    if(!r.ok){
+      const t0=await r.text();
+      if(t0.includes('ho_ten')||t0.includes('thon')||t0.includes('column')||t0.includes('PGRST204')){
+        const fallback={stt:stt, device_id:device_id, voter_ip:payload.voter_ip, user_agent:payload.user_agent, sdt:sdt};
+        r=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(fallback)});
+        if(r.ok){ try{localStorage.setItem(VOTE_DONE_KEY, String(stt));}catch(e){} showVoteStatus('✅ Bình chọn thành công! Cảm ơn bạn','success'); buildVoteUI(); return; }
+        throw new Error(t0);
+      }
+      if(t0.includes('duplicate')||t0.includes('23505')||t0.includes('unique')){
+        try{localStorage.setItem(VOTE_DONE_KEY, String(stt));}catch(e){}
+        showVoteStatus('⚠️ Thiết bị này đã bình chọn rồi','error');
+        buildVoteUI(); return;
+      }
+      throw new Error(t0);
+    }
+    try{localStorage.setItem(VOTE_DONE_KEY, String(stt));}catch(e){}
+    showVoteStatus('✅ Bình chọn thành công! Cảm ơn bạn','success');
+    buildVoteUI();
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Bình chọn'; }
+    const msg=e.message&&e.message.includes('PGRST205')?'❌ Chưa tạo bảng binh_chon_khan_gia — chạy SQL trong Supabase trước.':('❌ Lỗi: '+e.message.substring(0,120));
+    showVoteStatus(msg,'error');
+  }
+}
+function showVoteStatus(msg,type){
+  const el=document.getElementById('voteStatus');
+  if(!el) return;
+  el.textContent=msg; el.className='status-bar '+(type||'success');
+  el.style.display='block';
+}
+// === Dự đoán: 1 ĐT vừa bình chọn vừa dự đoán (2 lần riêng) ===
+const DUDOAN_DONE_KEY='da_du_doan';
+const SDT_STORAGE_KEY='saved_sdt';
+let pendingDuDoan=null;
+function isValidSdt(s){ return /^0\d{9,10}$/.test(String(s).trim()); }
+function resetSdtInput(){
+  const el=document.getElementById('voteSdtInput');
+  if(!el) return;
+  const aud=getAudienceInfo();
+  el.value=(aud && aud.sdt) ? aud.sdt : (localStorage.getItem(SDT_STORAGE_KEY)||'');
+  el.classList.remove('err');
+  // nếu đã có thông tin khán giả thì khóa SĐT để khỏi sửa nhầm (vẫn cho sửa nếu cần)
+  if(aud && aud.sdt) { el.placeholder='SĐT đã lưu: '+aud.sdt; }
+}
+function getSdtOrAlert(){
+  const aud=getAudienceInfo();
+  if(aud && aud.sdt && isValidSdt(aud.sdt)) return aud.sdt;
+  const el=document.getElementById('voteSdtInput');
+  const v=(el?el.value:'').trim();
+  if(!isValidSdt(v)){
+    if(el){ el.classList.add('err'); el.focus(); }
+    alert('Vui lòng nhập SĐT hợp lệ (10-11 số, bắt đầu 0) để nhận thưởng');
+    return null;
+  }
+  try{localStorage.setItem(SDT_STORAGE_KEY,v);}catch(e){}
+  return v;
+}
+function openDuDoanModal(stt,btn){
+  const m=MODELS.find(x=>x.stt===stt);
+  const idx=MODELS.findIndex(x=>x.stt===stt);
+  const tc=totalColor(idx);
+  pendingDuDoan={stt,btn};
+  const card=document.getElementById('voteModalCard');
+  card.innerHTML=`<div><div class="vm-name">${m.name}</div><div class="vm-unit">${m.unit}</div></div><div style="background:${tc};color:#37474f;padding:6px 12px;border-radius:20px;font-weight:800;font-size:13px;border:1px solid rgba(0,0,0,.06)">${m.name}</div>`;
+  card.style.background=`linear-gradient(135deg, ${tc}66, #ffffff)`;
+  card.style.borderColor=tc;
+  document.querySelector('#voteModal .vote-modal-icon').textContent='🔮';
+  document.querySelector('#voteModal .vote-modal-title').textContent='Bạn có chắc chắn không?';
+  document.querySelector('#voteModal .vote-modal-sub').textContent='Chọn một linh vật bạn đoán sẽ đạt giải Nhất';
+  document.querySelector('#voteModal .vote-modal-note').textContent='🏆 Đoán trúng giải Nhất sớm nhất sẽ được trao thưởng — SĐT để BTC liên hệ';
+  document.getElementById('voteModalConfirm').textContent='Xác nhận dự đoán';
+  document.getElementById('voteModalConfirm').onclick=confirmDuDoan;
+  document.querySelector('#voteModal .vote-sdt-wrap').style.display='';
+  document.querySelector('#voteModal .vote-sdt-wrap input').placeholder='Nhập SĐT để nhận thưởng khi đoán đúng';
+  resetSdtInput();
+  document.getElementById('voteModal').classList.add('open');
+}
+// override vote modal text khi mở vote
+const _openVoteModal=openVoteModal;
+openVoteModal=function(stt,btn){
+  _openVoteModal(stt,btn);
+  document.querySelector('#voteModal .vote-modal-icon').textContent='💖';
+  document.querySelector('#voteModal .vote-modal-title').textContent='Bạn có chắc chắn không?';
+  document.querySelector('#voteModal .vote-modal-sub').textContent='Chọn một linh vật mà bạn yêu thích nhất nhé';
+  document.querySelector('#voteModal .vote-modal-note').textContent='⚠️ Chú ý không được chọn lại — 1 điện thoại chỉ 1 phiếu (SĐT để trao thưởng)';
+  document.getElementById('voteModalConfirm').textContent='Xác nhận chọn';
+  document.getElementById('voteModalConfirm').onclick=confirmVote;
+  document.querySelector('#voteModal .vote-sdt-wrap').style.display='';
+  document.querySelector('#voteModal .vote-sdt-wrap input').placeholder='Nhập SĐT để nhận thưởng';
+  resetSdtInput();
+}
+async function buildDuDoanUI(){
+  const c=document.getElementById("dudoanContainer");
+  const done=localStorage.getItem(DUDOAN_DONE_KEY);
+  let winnerStt=null;
+  try{
+    const r=await fetch(`${config.url}/rest/v1/bang_tong_hop_diem?select=stt,diem_tb&order=diem_tb.desc&order=stt.asc&limit=1`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){ const rows=await r.json(); if(rows.length) winnerStt=rows[0].stt; }
+  }catch(e){}
+  // đếm số người đoán mỗi STT
+  let counts={};
+  try{
+    const r=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){ const rows=await r.json(); rows.forEach(x=> counts[x.stt_du_doan]=(counts[x.stt_du_doan]||0)+1); }
+  }catch(e){}
+  let banner='';
+  if(done){
+    const m=MODELS.find(x=>String(x.stt)===String(done));
+    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: ${m?m.name:''} — 1 ĐT chỉ 1 lần</div>`;
+  } else {
+    banner=`<div class="vote-banner open" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);color:#5b21b6;border-color:#ddd6fe">🔮 Chọn một linh vật bạn đoán sẽ đạt giải Nhất. Nếu nhiều người đoán đúng, ai gửi sớm nhất sẽ thắng!</div>`;
+  }
+  let winnerInfo='';
+  if(winnerStt){
+    const wm=MODELS.find(x=>x.stt===winnerStt);
+    winnerInfo=`<div style="margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #ddd6fe;border-radius:10px;text-align:center">🏆 Hiện tại dẫn đầu: <b>${wm?wm.name:''}</b> — người đoán đúng sớm nhất sẽ đạt giải</div>`;
+  } else {
+    winnerInfo=`<div style="margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;text-align:center;color:#78909c">⏳ Chưa có kết quả chấm — cứ đoán trước, hệ thống ghi thời gian gửi để xét sớm nhất</div>`;
+  }
+  // Chuẩn bị kết quả lên đầu (trước grid) để dễ thấy trên ĐT
+  let resultHtml='';
+  if(winnerStt){
+    try{
+      const r=await fetch(`${config.url}/rest/v1/du_doan?stt_du_doan=eq.${winnerStt}&select=device_id,sdt,stt_du_doan,created_at&order=created_at.asc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r.ok){
+        const rows=await r.json();
+        if(rows.length){
+          const wm2=MODELS.find(x=>x.stt===winnerStt);
+          resultHtml=`<div style="margin-bottom:12px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);max-width:100%"><div style="padding:12px 14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;word-break:normal;overflow-wrap:break-word"><span style="font-weight:800;min-width:0;flex:1 1 160px;word-break:normal;overflow-wrap:break-word;white-space:normal;line-height:1.35">🏅 Kết quả dự đoán — ${wm2?wm2.name:''} (giải Nhất)</span><span style="background:#fff;color:#7c3aed;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800;white-space:nowrap;flex-shrink:0">${rows.length} người đoán đúng</span></div><div style="padding:10px 12px;background:#f5f3ff;color:#5b21b6;font-size:12px;text-align:center;word-break:normal;overflow-wrap:break-word;white-space:normal">🥇 Sớm nhất thắng — nếu nhiều người đoán đúng, người gửi sớm nhất (theo <code>created_at</code>) được trao thưởng</div><div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:460px;table-layout:auto"><thead><tr style="background:#ede9fe;color:#5b21b6"><th style="padding:8px 10px;text-align:center">Hạng</th><th style="padding:8px 10px;text-align:left">SĐT (trao thưởng)</th><th style="padding:8px 10px;text-align:center">Dự đoán</th><th style="padding:8px 10px;text-align:left">Thời gian gửi</th><th style="padding:8px 10px;text-align:center">Thiết bị</th></tr></thead><tbody>`;
+          rows.forEach((x,i)=>{
+            const d=new Date(x.created_at);
+            const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+            const rank=i===0?'<span style="background:#ff6f00;color:#fff;padding:2px 8px;border-radius:12px;font-weight:800;white-space:nowrap;display:inline-block">🥇 1</span>':(i===1?'<span style="background:#8e24aa;color:#fff;padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block">🥈 2</span>':(i===2?'<span style="background:#1565c0;color:#fff;padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block">🥉 3</span>':`<span style="background:#eceff1;color:#37474f;padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block">${i+1}</span>`));
+            const rowBg=i===0?'background:linear-gradient(90deg,#fff8e1,#ffecb3)':(i%2===0?'background:#fafbff':'');
+            resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center;white-space:nowrap">${rank}</td><td style="padding:8px 10px;font-weight:700;color:#37474f;white-space:nowrap">${sdtMask}</td><td style="padding:8px 10px;text-align:center"><span style="background:${totalColor((winnerStt-1)%12)};color:#37474f;padding:3px 8px;border-radius:8px;font-weight:700;border:1px solid rgba(0,0,0,.06);display:inline-block;max-width:140px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.3;text-align:center;vertical-align:middle">${(MODELS.find(z=>z.stt===x.stt_du_doan)?.name||'')}</span></td><td style="padding:8px 10px;color:#455a64">${s}</td><td style="padding:8px 10px;text-align:center;color:#78909c;font-size:11px">${x.device_id.substring(0,8)}…</td></tr>`;
+          });
+          resultHtml+=`</tbody></table></div></div>`;
+        } else {
+          const _wmEmpty=MODELS.find(x=>x.stt===winnerStt);
+          resultHtml=`<div style="margin-bottom:12px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#78909c">Chưa có ai đoán đúng ${(_wmEmpty?_wmEmpty.name:'')} — hãy là người đầu tiên!</div>`;
+        }
+      }
+    }catch(e){}
+  } else {
+    try{
+      const r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=5`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r.ok){
+        const rows=await r.json();
+        if(rows.length){
+          resultHtml=`<div style="margin-bottom:12px;background:#fff;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-weight:800;color:#5b21b6;margin-bottom:8px">🕒 5 dự đoán mới nhất</div><div style="display:grid;gap:6px">`;
+          rows.forEach(x=>{
+            const m=MODELS.find(z=>z.stt===x.stt_du_doan);
+            const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            const sdtM=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+            resultHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;background:#f5f3ff;border-radius:8px;font-size:12px;min-width:0"><span style="min-width:0;word-break:normal;overflow-wrap:break-word;white-space:normal"><b>${m?m.name:''}</b></span><span style="color:#78909c;word-break:normal;overflow-wrap:break-word;white-space:normal;text-align:right;flex-shrink:0">${sdtM} · ${s}</span></div>`;
+          });
+          resultHtml+=`</div></div>`;
+        }
+      }
+    }catch(e){}
+  }
+  // Danh sách chi tiết tất cả khán giả đã dự đoán
+  let listHtml='';
+  try{
+    let rows=[];
+    let r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(!r.ok){
+      const t=await r.text();
+      if(t.includes('ho_ten')||t.includes('thon')||t.includes('column')||t.includes('PGRST204')){
+        r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      }
+    }
+    if(r && r.ok) rows=await r.json();
+    if(rows.length){
+      listHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);max-width:100%"><div style="padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-weight:800;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><span>📊 Kết quả dự đoán (${rows.length})</span><span style="background:#fff;color:#6366f1;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:800">${rows.length} lượt</span></div><div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px;table-layout:auto"><thead><tr style="background:#f0f9ff;color:#0369a1"><th style="padding:8px 10px;text-align:center">#</th><th style="padding:8px 10px;text-align:left">Họ tên</th><th style="padding:8px 10px;text-align:left">Thôn</th><th style="padding:8px 10px;text-align:left">SĐT</th><th style="padding:8px 10px;text-align:center">Dự đoán</th><th style="padding:8px 10px;text-align:left">Thời gian</th></tr></thead><tbody>`;
+      rows.forEach((x,i)=>{
+        const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+        const ten = (x.ho_ten||x.ten||'').trim() || '—';
+        const thon = (x.thon||'').trim() || '—';
+        const m=MODELS.find(z=>z.stt===x.stt_du_doan); const duDoanName=m?m.name:`STT ${x.stt_du_doan}`;
+        const rowBg=i%2===0?'background:#fff':'background:#f8fafc';
+        listHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${i+1}</td><td style="padding:8px 10px;font-weight:600;word-break:normal;overflow-wrap:break-word;max-width:140px">${ten}</td><td style="padding:8px 10px;word-break:normal;overflow-wrap:break-word;max-width:120px">${thon}</td><td style="padding:8px 10px;font-weight:600;white-space:nowrap">${sdtMask}</td><td style="padding:8px 10px;text-align:center"><span style="background:${totalColor((x.stt_du_doan-1)%12)};color:#37474f;padding:3px 8px;border-radius:8px;font-weight:700;border:1px solid rgba(0,0,0,.06);display:inline-block;max-width:130px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.3;text-align:center">${duDoanName}</span></td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
+      });
+      listHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Hiển thị ${rows.length} lượt gần nhất • SĐT che 4 số giữa để bảo mật</div></div>`;
+    } else {
+      listHtml=`<div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.06)">Chưa có ai dự đoán — hãy là người đầu tiên!</div>`;
+    }
+  }catch(e){}
+  let html=banner+`<div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>`+winnerInfo+resultHtml+listHtml;
+  c.innerHTML=html;
+}
+function dudoan(stt,btn){
+  const done=localStorage.getItem(DUDOAN_DONE_KEY);
+  if(done){ showDuDoanStatus('⚠️ Bạn đã dự đoán rồi — 1 ĐT chỉ 1 lần','error'); return; }
+  if(!config){ showDuDoanStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
+  openDuDoanModal(stt,btn);
+}
+async function confirmDuDoan(){
+  if(!pendingDuDoan) return;
+  const sdt=getSdtOrAlert();
+  if(!sdt) return;
+  const {stt,btn}=pendingDuDoan;
+  closeVoteModal(); pendingDuDoan=null;
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Đang gửi...'; }
+  try{
+    const device_id=getDeviceId();
+    const aud=getAudienceInfo();
+    let payloadDD={device_id, stt_du_doan:stt, sdt:sdt};
+    if(aud){ payloadDD.ho_ten=aud.ten; payloadDD.thon=aud.thon; payloadDD.ten=aud.ten; }
+    let r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payloadDD)});
+    if(!r.ok){
+      const t0=await r.text();
+      if(t0.includes('ho_ten')||t0.includes('thon')||t0.includes('column')||t0.includes('PGRST204')){
+        const fallback={device_id, stt_du_doan:stt, sdt:sdt};
+        r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(fallback)});
+        if(r.ok){ try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){} showDuDoanStatus('✅ Đã ghi nhận dự đoán! Chờ kết quả chấm','success'); buildDuDoanUI(); return; }
+        throw new Error(t0);
+      }
+      if(t0.includes('duplicate')||t0.includes('23505')||t0.includes('unique')){
+        try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){}
+        showDuDoanStatus('⚠️ Thiết bị này đã dự đoán rồi','error'); buildDuDoanUI(); return;
+      }
+      throw new Error(t0);
+    }
+    try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){}
+    showDuDoanStatus('✅ Đã ghi nhận dự đoán! Chờ kết quả chấm','success'); buildDuDoanUI();
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Dự đoán'; }
+    const msg=e.message&&e.message.includes('PGRST205')?'❌ Chưa tạo bảng du_doan — chạy SQL dưới.':('❌ Lỗi: '+e.message.substring(0,120));
+    showDuDoanStatus(msg,'error');
+  }
+}
+function showDuDoanStatus(msg,type){
+  const el=document.getElementById('dudoanStatus');
+  if(!el) return;
+  el.textContent=msg; el.className='status-bar '+(type||'success'); el.style.display='block';
+}
+async function loadSummary(){
+  const c=document.getElementById("summaryContainer");
+  c.innerHTML='<div style="padding:24px;text-align:center;color:#666">⏳ Đang tải dữ liệu...</div>';
+  if(!config){ c.innerHTML='<div style="padding:20px;text-align:center;color:#c62828">Chưa cấu hình Supabase</div>'; return; }
+  try{
+    let rows=null;
+    let r=await fetch(`${config.url}/rest/v1/bang_tong_hop_diem?select=*&order=stt`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){ rows=await r.json(); }
+    if(!rows || !rows.length){
+      r=await fetch(`${config.url}/rest/v1/diem_trung_thu_2026?select=stt,ten_mo_hinh,ten_don_vi,nguoi_cham,tong_diem`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(!r.ok) throw new Error(await r.text());
+      const raw=await r.json();
+      const map={};
+      raw.forEach(rw=>{
+        if(!map[rw.stt]) map[rw.stt]={stt:rw.stt,ten_mo_hinh:rw.ten_mo_hinh,ten_don_vi:rw.ten_don_vi,diem_gk_loi:0,diem_gk_hieu:0,diem_gk_hung:0,diem_gk_loan:0,diem_gk_cuong:0};
+        const k='diem_gk_'+rw.nguoi_cham; if(k in map[rw.stt]) map[rw.stt][k]=rw.tong_diem;
+      });
+      rows=Object.values(map).map(x=>({...x,diem_tb:Math.round(((x.diem_gk_loi||0)+(x.diem_gk_hieu||0)+(x.diem_gk_hung||0)+(x.diem_gk_loan||0)+(x.diem_gk_cuong||0))/5*10)/10})).sort((a,b)=>a.stt-b.stt);
+    }
+    if(!rows.length){ c.innerHTML='<div style="padding:24px;text-align:center;color:#666">Chưa có dữ liệu chấm điểm</div>'; return; }
+    // Lấy số phiếu khán giả để hiển thị cùng bảng tổng hợp
+    let voteMap={};
+    try{
+      const vr=await fetch(`${config.url}/rest/v1/thong_ke_binh_chon?select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(vr.ok){ const vrows=await vr.json(); vrows.forEach(x=> voteMap[x.stt]=x.so_phieu); }
+      else {
+        const vr2=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia?select=stt`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+        if(vr2.ok){ const vrows2=await vr2.json(); vrows2.forEach(x=> voteMap[x.stt]=(voteMap[x.stt]||0)+1); }
+      }
+    }catch(e){}
+    const sorted=[...rows].sort((a,b)=> (b.diem_tb||0)-(a.diem_tb||0));
+    const rankMap={}; sorted.forEach((r,i)=>{ if(i>0 && r.diem_tb===sorted[i-1].diem_tb) rankMap[r.stt]=rankMap[sorted[i-1].stt]; else rankMap[r.stt]=i+1; });
+    rows.forEach(r=> r.hang=rankMap[r.stt]);
+    rows.sort((a,b)=> a.hang-b.hang || a.stt-b.stt);
+    let html=`<div class="summary-wrap"><div class="summary-head"><h2>📊 Bảng tổng hợp điểm (${rows.length} mô hình)</h2><button onclick="loadSummary()">↻ Làm mới</button></div><div class="table-scroll"><table class="summary-table"><thead><tr><th>Hạng</th><th>STT</th><th>Tên mô hình</th><th>Đơn vị</th><th>GK Lợi</th><th>GK Hiếu</th><th>GK Hùng</th><th>GK Loan</th><th>GK Cường</th><th>TB</th><th>🗳️ Khán giả</th></tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const rc=r.hang===1?'rank-1':r.hang===2?'rank-2':r.hang===3?'rank-3':'';
+      const bc=r.hang===1?'badge-1':r.hang===2?'badge-2':r.hang===3?'badge-3':'';
+      const badge=r.hang<=3?`<span class="badge ${bc}">${r.hang===1?'🥇':r.hang===2?'🥈':'🥉'} ${r.hang}</span>`:`<span class="badge" style="background:#78909c">${r.hang}</span>`;
+      const soPhieu=voteMap[r.stt]||0;
+      const phieuColor=soPhieu>0?'#2e7d32':'#90a4ae';
+      const phieuWeight=soPhieu>0?'bold':'normal';
+      html+=`<tr class="${rc}"><td>${badge}</td><td>${r.stt}</td><td style="font-weight:600">${r.ten_mo_hinh||''}</td><td>${r.ten_don_vi||''}</td><td>${r.diem_gk_loi??'-'}</td><td>${r.diem_gk_hieu??'-'}</td><td>${r.diem_gk_hung??'-'}</td><td>${r.diem_gk_loan??'-'}</td><td>${r.diem_gk_cuong??'-'}</td><td style="font-weight:bold;color:#1a237e">${r.diem_tb??0}</td><td style="font-weight:${phieuWeight};color:${phieuColor}">${soPhieu||'0'}</td></tr>`;
+    });
+    html+='</tbody></table></div></div>';
+    // link chia sẻ bình chọn
+    const voteUrl=location.origin+location.pathname+'?view=binhchon';
+    html+=`<div style="margin-top:12px;padding:10px 14px;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><span>🔗 Link bình chọn khán giả:</span><a href="${voteUrl}" target="_blank" style="color:#1565c0;word-break:break-all">${voteUrl}</a><button onclick="navigator.clipboard.writeText('${voteUrl}').then(()=>alert('Đã copy link'))" style="padding:6px 12px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer">Copy link</button></div>`;
+    c.innerHTML=html;
+  }catch(e){ c.innerHTML=`<div style="padding:20px;text-align:center;color:#c62828">Lỗi tải: ${e.message.substring(0,120)}</div>`; }
+}
+
+function loadConfig(){
+  config=DC;
+  try{localStorage.setItem('cd2026_config',JSON.stringify(config));}catch(e){}
+}
+
+function saveConfig(){
+  const url=document.getElementById("supabaseUrl").value.trim();
+  const key=document.getElementById("supabaseKey").value.trim();
+  if(!url||!key){alert("Vui lòng nhập đầy đủ URL và Key!");return;}
+  config={url,key};
+  localStorage.setItem('cd2026_config',JSON.stringify(config));
+  document.getElementById("configBar").classList.add("visible");
+  showStatus("✅ Đã lưu cấu hình Supabase!","success");
+}
+
+function testConn(){
+  if(!config){showStatus("⚠️ Chưa cấu hình Supabase!","error");return;}
+  fetch(`${config.url}/rest/v1/diem_trung_thu_2026?limit=1`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}})
+    .then(r=>r.ok?showStatus("✅ Kết nối Supabase thành công!","success"):r.json().then(e=>showStatus("⚠️ "+e.message+" - Chạy setup-supabase.sql trước.","error")))
+    .catch(()=>showStatus("❌ Không thể kết nối Supabase!","error"));
+}
+
+function saveAll(){
+  if(!config){showStatus("⚠️ Cần cấu hình Supabase trước!","error");return;}
+  const btn=document.getElementById("saveBtn");
+  btn.disabled=true;btn.textContent="⏳ Đang lưu...";
+  const payload=MODELS.map((m,idx)=>{
+    const s=scores[idx]||{};
+    const total=CRITERIA.reduce((acc,c)=>acc+c.subs.reduce((a2,_,si)=>a2+(s[c.id]?.[si]||0),0),0);
+    return{stt:m.stt,ten_mo_hinh:m.name,ten_don_vi:m.unit,nguoi_cham:currentJudge,
+      diem_c1_s1:s[1]?.[0]||0,diem_c1_s2:s[1]?.[1]||0,diem_c1_s3:s[1]?.[2]||0,
+      diem_c2_s1:s[2]?.[0]||0,diem_c2_s2:s[2]?.[1]||0,diem_c2_s3:s[2]?.[2]||0,
+      diem_c3_s1:s[3]?.[0]||0,diem_c3_s2:s[3]?.[1]||0,diem_c3_s3:s[3]?.[2]||0,
+      diem_c4_s1:s[4]?.[0]||0,diem_c4_s2:s[4]?.[1]||0,diem_c4_s3:s[4]?.[2]||0,
+      diem_c5_s1:s[5]?.[0]||0,diem_c5_s2:s[5]?.[1]||0,tong_diem:total};
+  });
+  fetch(`${config.url}/rest/v1/diem_trung_thu_2026?on_conflict=stt,nguoi_cham`,{
+    method:"POST",
+    headers:{"apikey":config.key,Authorization:`Bearer ${config.key}`,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},
+    body:JSON.stringify(payload)
+  }).then(r=>{
+    if(!r.ok) return r.text().then(t=>{throw new Error(t||('HTTP '+r.status))});
+    return r.text().then(t=>{ if(!t) return []; try{return JSON.parse(t);}catch(e){return [];}});
+  }).then(()=>{showStatus("✅ Lưu thành công!","success");btn.disabled=false;btn.textContent="💾 Lưu tất cả điểm";})
+  .catch(e=>{const msg=e.message?.includes('PGRST205')||e.message?.includes('table')?"❌ Table chưa tồn tại! Chạy setup-supabase.sql trước.":"❌ Lỗi: "+(e.message||e);showStatus(msg,"error");btn.disabled=false;btn.textContent="💾 Lưu tất cả điểm";});
+}
+
+function showStatus(msg,type){const bar=document.getElementById("statusBar");bar.textContent=msg;bar.className=`status-bar ${type}`;}
+function closeDesktopPopup(persist){const el=document.getElementById('desktopPopup'); if(el) el.classList.remove('open'); if(persist) try{sessionStorage.setItem('desktop_popup_dismissed','1')}catch(e){}}
+function maybeShowDesktopPopup(){
+  try{
+    if(sessionStorage.getItem('desktop_popup_dismissed')) return;
+    const isDesktop = window.matchMedia('(min-width: 769px)').matches && !/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if(!isDesktop) return;
+    const params=new URLSearchParams(location.search);
+    const view=params.get('view');
+    const judge=params.get('judge');
+    if(view || judge) return;
+    const el=document.getElementById('desktopPopup');
+    if(!el) return;
+    setTimeout(()=> el.classList.add('open'), 400);
+  }catch(e){}
+}
+window.addEventListener('DOMContentLoaded', maybeShowDesktopPopup);
+window.addEventListener('resize', ()=>{ try{ if(!document.getElementById('desktopPopup').classList.contains('open')) maybeShowDesktopPopup(); }catch(e){} });
+
+loadConfig();
+init();
+</script>
+</body>
+</html>
