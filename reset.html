@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset - Mô hình Trung thu 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#fffbeb;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(127,29,29,.12);max-width:420px;width:100%;overflow:hidden;border:1px solid #fde68a;text-align:center}
+.head{padding:20px;background:linear-gradient(135deg,#7f1d1d,#b45309);color:#fff}
+.head h1{font-size:18px}
+.body{padding:20px}
+.warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:disabled{opacity:.6;cursor:not-allowed}
+.btn-ghost{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.log{margin-top:12px;font-size:12px;color:#57534e;white-space:pre-wrap;text-align:left;background:#fffbeb;padding:8px;border-radius:8px;max-height:160px;overflow:auto;display:none}
+input{width:100%;padding:10px;border:1px solid #fde68a;border-radius:8px;margin-bottom:10px;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head"><h1>🔄 Reset kết quả</h1><p style="font-size:12px;opacity:.9">Bình chọn + Dự đoán</p></div>
+  <div class="body">
+    <div class="warn">⚠️ Xóa <b>toàn bộ</b> bình chọn & dự đoán trong Supabase. Không khôi phục được!</div>
+    <input id="pw" type="password" placeholder="Nhập mã xác nhận: 2026">
+    <button class="btn btn-danger" id="btnReset" onclick="doReset()">Xóa hết Bình chọn + Đoán</button>
+    <button class="btn btn-ghost" onclick="location.href='/'">← Về trang chủ</button>
+    <div class="log" id="log"></div>
+    <p style="font-size:11px;color:#a8a29e;margin-top:10px">Link trực tiếp: <code>?confirm=2026</code> tự chạy khi có mã</p>
+  </div>
+</div>
+<script>
+const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
+function log(m){const el=document.getElementById('log');el.style.display='block';el.textContent+=m+"\n"}
+async function doReset(){
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='2026'){alert('Mã sai! Nhập 2026');return}
+  if(!confirm('Chắc chắn XÓA HẾT bình chọn + dự đoán?')) return;
+  const btn=document.getElementById('btnReset'); btn.disabled=true; btn.textContent='⏳ Đang xóa...';
+  try{
+    // Xóa du_doan
+    let r1=await fetch(`${DC.url}/rest/v1/du_doan?device_id=neq.000`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}});
+    log(`du_doan: ${r1.status} ${r1.statusText}`);
+    // Xóa binh_chon_khan_gia (dùng stt neq -1 để match all)
+    let r2=await fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?stt=neq.-1`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}});
+    log(`binh_chon_khan_gia: ${r2.status} ${r2.statusText}`);
+    // Thử fallback nếu RLS chặn delete với filter khác
+    if(!r1.ok){ 
+      const t=await r1.text(); log('du_doan detail: '+t);
+      // thử với id neq 0
+      r1=await fetch(`${DC.url}/rest/v1/du_doan?id=neq.0`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}});
+      log(`du_doan retry: ${r1.status}`);
+    }
+    if(!r2.ok){
+      const t=await r2.text(); log('binh_chon detail: '+t);
+    }
+    if(r1.ok && r2.ok){ log('✅ Đã xóa xong!'); alert('Đã reset xong!'); }
+    else { log('⚠️ Kiểm tra RLS: cần cho anon DELETE. Chạy SQL bên dưới nếu lỗi.'); }
+  }catch(e){ log('❌ Lỗi: '+e.message)}
+  btn.disabled=false; btn.textContent='Xóa hết Bình chọn + Đoán';
+}
+// auto nếu ?confirm=2026
+if(new URLSearchParams(location.search).get('confirm')==='2026'){
+  document.getElementById('pw').value='2026';
+  setTimeout(doReset,600);
+}
+</script>
+</body>
+</html>
