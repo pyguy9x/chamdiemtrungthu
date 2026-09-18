@@ -98,7 +98,7 @@ function closeResetDeviceModal(){ document.getElementById('resetModal').classLis
 function confirmResetDevice(){
   const pw=document.getElementById('resetPw').value.trim();
   const el=document.getElementById('resetPw');
-  if(pw!=='2026'){ el.classList.add('err'); el.focus(); alert('Mật khẩu sai!'); return; }
+  if(pw!=='TT2026'){ el.classList.add('err'); el.focus(); alert('Mật khẩu sai!'); return; }
   el.classList.remove('err');
   closeResetDeviceModal();
   try{
@@ -117,7 +117,7 @@ function confirmResetDevice(){
 function resetDevice(){ openResetDeviceModal(); }
 async function loadDevices(){
   const pw=document.getElementById('pw').value.trim();
-  if(pw!=='2026'){ document.getElementById('pw').classList.add('err'); alert('Nhập mã xác nhận trước khi tải danh sách'); document.getElementById('pw').focus(); return; }
+  if(pw!=='TT2026'){ document.getElementById('pw').classList.add('err'); alert('Nhập mã xác nhận trước khi tải danh sách'); document.getElementById('pw').focus(); return; }
   document.getElementById('pw').classList.remove('err');
   const list=document.getElementById('deviceList');
   list.innerHTML='<div style="padding:20px;text-align:center;color:#a8a29e">⏳ Đang tải...</div>';
@@ -155,7 +155,7 @@ function toggleSelectAll(el){
 }
 async function doResetSelected(clearLocal){
   const pw=document.getElementById('pw').value.trim();
-  if(pw!=='2026'){ document.getElementById('pw').classList.add('err'); alert('Nhập mã xác nhận'); document.getElementById('pw').focus(); return; }
+  if(pw!=='TT2026'){ document.getElementById('pw').classList.add('err'); alert('Nhập mã xác nhận'); document.getElementById('pw').focus(); return; }
   document.getElementById('pw').classList.remove('err');
   const checked=[...document.querySelectorAll('#deviceList input[type=checkbox]:checked')].map(c=>c.value);
   if(!checked.length){ alert('Chưa chọn thiết bị nào'); return; }
@@ -188,7 +188,7 @@ async function doResetSelected(clearLocal){
 }
 async function doReset(){
   const pw=document.getElementById('pw').value.trim();
-  if(pw!=='2026'){document.getElementById('pw').classList.add('err'); alert('Mã sai!'); return}
+  if(pw!=='TT2026'){document.getElementById('pw').classList.add('err'); alert('Mã sai!'); return}
   document.getElementById('pw').classList.remove('err');
   if(!confirm('Chắc chắn XÓA HẾT bình chọn + dự đoán trên Supabase?')) return;
   const btn=document.getElementById('btnReset'); btn.disabled=true; btn.textContent='⏳ Đang xóa...';
@@ -214,9 +214,9 @@ async function doReset(){
   }catch(e){ log('❌ Lỗi: '+e.message)}
   btn.disabled=false; btn.textContent='Xóa hết Bình chọn + Đoán';
 }
-// auto nếu ?confirm=2026
-if(new URLSearchParams(location.search).get('confirm')==='2026'){
-  document.getElementById('pw').value='2026';
+// auto nếu ?confirm=TT2026
+if(new URLSearchParams(location.search).get('confirm')==='TT2026'){
+  document.getElementById('pw').value='TT2026';
   setTimeout(doReset,600);
 }
 </script>

@@ -1086,12 +1086,6 @@ async function submitTongDuDoan(){
   }
 }
 
-function dudoan(stt,btn){
-  const done=localStorage.getItem(DUDOAN_DONE_KEY);
-  if(done){ showDuDoanStatus('⚠️ Bạn đã dự đoán rồi — 1 ĐT chỉ 1 lần','error'); return; }
-  if(!config){ showDuDoanStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
-  openDuDoanModal(stt,btn);
-}
 async function confirmDuDoan(){
   if(!pendingDuDoan) return;
   const sdt=getSdtOrAlert();
