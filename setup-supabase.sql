@@ -46,6 +46,12 @@ create index if not exists idx_dudoan_stt on du_doan (stt_du_doan);
 alter table du_doan add column if not exists tong_du_doan int;
 update du_doan set tong_du_doan = stt_du_doan where tong_du_doan is null;
 create index if not exists idx_dudoan_tong on du_doan (tong_du_doan);
+-- Fix lỗi 23514 violates check constraint du_doan_stt_du_doan_check (bảng cũ giới hạn 1-27, logic mới dự đoán tổng 0-10000)
+alter table du_doan drop constraint if exists du_doan_stt_du_doan_check;
+alter table du_doan drop constraint if exists du_doan_tong_du_doan_check;
+alter table du_doan drop constraint if exists du_doan_check;
+-- Nếu muốn giới hạn mới (tùy chọn, bỏ comment để bật): check 0..10000
+-- do $$ begin if not exists (select 1 from pg_constraint where conname='du_doan_tong_range') then alter table du_doan add constraint du_doan_tong_range check (coalesce(tong_du_doan, stt_du_doan) between 0 and 10000); end if; end $$;
 
 -- 4. View đếm phiếu (trang bình chọn chỉ cần GET nhẹ, khỏi quét full bảng)
 drop view if exists thong_ke_binh_chon cascade;
