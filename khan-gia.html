@@ -916,11 +916,12 @@ async function buildDuDoanUI(){
     const r=await fetch(`${config.url}/rest/v1/bang_tong_hop_diem?select=stt,diem_tb&order=diem_tb.desc&order=stt.asc&limit=1`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
     if(r.ok){ const rows=await r.json(); if(rows.length) winnerStt=rows[0].stt; }
   }catch(e){}
-  // đếm số người đoán mỗi STT
+  // đếm số người đoán mỗi STT (ưu tiên view public, fallback bảng gốc)
   let counts={};
   try{
-    const r=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(r.ok){ const rows=await r.json(); rows.forEach(x=> counts[x.stt_du_doan]=(counts[x.stt_du_doan]||0)+1); }
+    const rv=await fetch(`${config.url}/rest/v1/thong_ke_du_doan?select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(rv.ok){ const rows=await rv.json(); rows.forEach(x=> counts[x.stt??x.stt_du_doan]=(counts[x.stt??x.stt_du_doan]||0)+(x.so_doan??x.so_luong??1)); }
+    else { const r=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}}); if(r.ok){ const rows=await r.json(); rows.forEach(x=> counts[x.stt_du_doan]=(counts[x.stt_du_doan]||0)+1); } }
   }catch(e){}
   let banner='';
   if(done){
@@ -936,7 +937,8 @@ async function buildDuDoanUI(){
   let resultHtml='';
   if(winnerStt){
     try{
-      const r=await fetch(`${config.url}/rest/v1/du_doan?stt_du_doan=eq.${winnerStt}&select=device_id,sdt,stt_du_doan,created_at&order=created_at.asc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?stt_du_doan=eq.${winnerStt}&select=*&order=created_at.asc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?stt_du_doan=eq.${winnerStt}&select=device_id,sdt,stt_du_doan,created_at&order=created_at.asc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
       if(r.ok){
         const rows=await r.json();
         if(rows.length){
@@ -959,7 +961,8 @@ async function buildDuDoanUI(){
     }catch(e){}
   } else {
     try{
-      const r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=5`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.desc&limit=5`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=5`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
       if(r.ok){
         const rows=await r.json();
         if(rows.length){
@@ -979,7 +982,8 @@ async function buildDuDoanUI(){
   let listHtml='';
   try{
     let rows=[];
-    let r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
     if(!r.ok){
       const t=await r.text();
       if(t.includes('ho_ten')||t.includes('thon')||t.includes('column')||t.includes('PGRST204')){
@@ -1003,7 +1007,18 @@ async function buildDuDoanUI(){
       listHtml=`<div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.06)">Chưa có ai dự đoán — hãy là người đầu tiên!</div>`;
     }
   }catch(e){}
-  let html=banner+`<div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>`+winnerInfo+resultHtml+listHtml;
+  let grid=`<div class="vote-grid" style="margin-bottom:14px">`;
+  MODELS.forEach((m,idx)=>{
+    const tc=totalColor(idx);
+    const n=counts[m.stt]||0;
+    const isThis=String(done)===String(m.stt);
+    const dis=done?'disabled':'';
+    const txt=isThis?'✅ Đã đoán':(done?'Đã khóa':'🔮 Dự đoán');
+    const cls=isThis?'vote-btn voted':'vote-btn';
+    grid+=`<div class="vote-card" style="border-left-color:${tc}"><div class="vote-card-head"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div class="total" style="background:${n?tc:'#eceff1'}">${n} dự đoán</div></div><div class="vote-card-body"><button class="${cls}" ${dis} onclick="dudoan(${m.stt},this)" style="${isThis?'':'background:#ede9fe;color:#5b21b6;border-color:#ddd6fe'}">${txt}</button></div></div>`;
+  });
+  grid+=`</div>`;
+  let html=banner+`<div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>`+grid+winnerInfo+resultHtml+listHtml;
   c.innerHTML=html;
 }
 function dudoan(stt,btn){
