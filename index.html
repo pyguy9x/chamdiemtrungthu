@@ -350,7 +350,7 @@ function submitAudienceInfo(){
   if(!/^0\d{9,10}$/.test(sdt)){ sdtEl.classList.add('err'); ok=false; }
   if(!ok){ showStatus('⚠️ Vui lòng điền đầy đủ họ tên, thôn và SĐT hợp lệ','error'); const bar=document.getElementById('statusBar'); bar.style.display='block'; bar.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   saveAudienceInfo({ten, thon, sdt, ts:Date.now()});
-  showAudienceVote();
+  showAudienceDuDoan();
 }
 function buildAudienceTabs(active){
   const bar=document.getElementById('tabBar');
@@ -725,15 +725,10 @@ async function buildVoteUI(){
   }catch(e){}
   let banner='';
   const mVoted=done?MODELS.find(x=>String(x.stt)===String(done)):null;
-  const mDuDoan=doneDuDoan?MODELS.find(x=>String(x.stt)===String(doneDuDoan)):null;
-  if(done && doneDuDoan){
-    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn STT ${done}${mVoted?': '+mVoted.name:''} và dự đoán STT ${doneDuDoan}${mDuDoan?': '+mDuDoan.name:''} — mỗi loại 1 lần/ĐT</div>`;
-  } else if(done){
-    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn: STT ${done}. ${mVoted?mVoted.name:''} — bạn vẫn có thể dự đoán giải Nhất (1 lần)</div>`;
-  } else if(doneDuDoan){
-    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: STT ${doneDuDoan}. ${mDuDoan?mDuDoan.name:''} — bạn vẫn có thể bình chọn yêu thích (1 lần)</div>`;
+  if(done){
+    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn: STT ${done}. ${mVoted?mVoted.name:''} — mỗi thiết bị chỉ 1 lần</div>`;
   } else {
-    banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích và 🔮 dự đoán 1 linh vật sẽ đạt giải Nhất — mỗi loại 1 lần/ĐT, SĐT để trao thưởng</div>`;
+    banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích — mỗi thiết bị chỉ 1 phiếu bình chọn</div>`;
   }
   let html=banner+`<div class="vote-top-status"><div class="status-bar" id="voteStatus" style="display:none"></div><div class="status-bar" id="dudoanStatus" style="display:none"></div></div><div class="vote-grid">`;
   MODELS.forEach((m,idx)=>{
@@ -757,7 +752,7 @@ async function buildVoteUI(){
     const dis2=anyDuDoan?'disabled':'';
     const duDoanBadgeBg=soDuDoan===0?'#eceff1':'#ede9fe';
     const duDoanBadgeColor=soDuDoan===0?'#78909c':'#5b21b6';
-    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div><div style="background:${duDoanBadgeBg};min-width:46px;text-align:center;padding:3px 8px;border-radius:10px;color:${duDoanBadgeColor};font-weight:bold;font-size:11px;border:1px solid ${soDuDoan===0?'#cfd8dc':'#ddd6fe'}">${soDuDoan} dự đoán</div></div></div><div class="vote-card-body"><div class="vote-count" style="color:${countColor}">Phiếu: <b>${soPhieu}</b> · Dự đoán: <b style="color:${soDuDoan? '#5b21b6':'#90a4ae'}">${soDuDoan}</b></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button><button class="${duDoanClass}" ${dis2} onclick="dudoan(${m.stt},this)" style="${isThisDuDoan?'':'background:#ede9fe;color:#5b21b6;border-color:#ddd6fe'}">${duDoanText}</button></div></div></div>`;
+    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div></div></div><div class="vote-card-body"><div><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button></div></div></div>`;
   });
   html+=`</div>`;
   c.innerHTML=html;
@@ -944,10 +939,9 @@ async function buildDuDoanUI(){
   list.sort((a,b)=> a._diff - b._diff || new Date(a.created_at) - new Date(b.created_at));
   let banner='';
   if(doneVal!==null && !isNaN(doneVal)){
-    const myDiff=Math.abs(doneVal - actualTotal);
-    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: <b>${doneVal} người</b> • Tổng thực tế: <b>${actualTotal} người</b> • Chênh lệch: <b>${myDiff}</b> — 1 ĐT chỉ 1 lần</div>`;
+    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: <b>${doneVal} người</b> — 1 ĐT chỉ 1 lần • Kết quả sẽ công bố sau khi kết thúc bình chọn</div>`;
   } else {
-    banner=`<div class="vote-banner open" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);color:#5b21b6;border-color:#ddd6fe">🔮 Dự đoán <b>tổng số người tham gia bình chọn</b> — ai gần nhất thắng! Hiện tại: <b>${actualTotal} lượt</b> • Chia 3 giải Nhất/Nhì/Ba, trùng số thì gửi sớm thắng</div>`;
+    banner=`<div class="vote-banner open" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);color:#5b21b6;border-color:#ddd6fe">🔮 Dự đoán <b>tổng số người tham gia bình chọn</b> — ai gần nhất thắng! Chia 3 giải Nhất/Nhì/Ba, trùng số thì gửi sớm thắng</div>`;
   }
   let formHtml='';
   if(doneVal===null || isNaN(doneVal)){
@@ -955,7 +949,7 @@ async function buildDuDoanUI(){
       <div style="font-weight:800;color:#5b21b6;margin-bottom:8px">📝 Nhập dự đoán của bạn</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="tongDuDoanInput" type="number" min="0" max="1000000" step="1" placeholder="VD: ${Math.max(0, actualTotal+10)}" style="flex:1 1 160px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px">
-        <button onclick="submitTongDuDoan()" style="padding:10px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.25)">Gửi dự đoán</button>
+        <button onclick="submitTongDuDoan()" style="padding:10px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.25)">Nhập tổng số người tham gia bình chọn linh vật</button>
       </div>
       <div style="font-size:12px;color:#64748b;margin-top:6px">Nhập số nguyên ≥0 (VD: 350). Mỗi SĐT/ĐT chỉ 1 lần, gửi sớm thắng nếu trùng số.</div>
       <div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>
@@ -1017,13 +1011,19 @@ async function buildDuDoanUI(){
         if(doneVal!==null && !isNaN(doneVal)){
           myCardHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;text-align:center"><div style="font-weight:700;color:#334155">Dự đoán của bạn: <b>${doneVal} người</b> • Tổng thực tế: <b>${actualTotal}</b></div><div style="font-size:12px;color:#64748b;margin-top:4px">Tổng số người đã tham gia dự đoán: <b>${list.length}</b> • Tổng lượt bình chọn: <b>${actualTotal}</b></div><div style="font-size:11px;color:#94a3b8;margin-top:4px">SDT ${mySdt.replace(/(\d{3})\d+(\d{2})$/, '$1****$2')} chưa có trong bảng (có thể bạn đổi SĐT) — liên hệ BTC nếu cần</div></div>`;
         } else {
-          myCardHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;text-align:center"><div style="font-size:13px;color:#475569">Tổng số người đã tham gia dự đoán: <b>${list.length}</b> • Tổng lượt bình chọn thực tế: <b>${actualTotal}</b></div><div style="font-size:12px;color:#64748b;margin-top:4px">SĐT của bạn: <b>${mySdt.replace(/(\d{3})\d+(\d{2})$/, '$1****$2')}</b> — hãy nhập dự đoán ở trên để tham gia</div></div>`;
+          myCardHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;text-align:center"><div style="font-size:13px;color:#475569">Tổng số người đã tham gia dự đoán: <b>${list.length}</b> • Tổng lượt bình chọn thực tế: <b>${actualTotal}</b></div><div style="font-size:12px;color:#64748b;margin-top:4px">SĐT của bạn: <b>${mySdt.replace(/(\d{3})\d+(\d{2})$/, '$1****$2')}</b> — hãy nhập dự đoán ở trên để tham gia</div><button onclick="document.getElementById('tongDuDoanInput')?.focus(); document.getElementById('tongDuDoanInput')?.scrollIntoView({behavior:'smooth',block:'center'})" style="margin-top:10px;padding:10px 16px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.25)">Nhập tổng số người tham gia bình chọn linh vật</button></div>`;
         }
       }
     } else {
-      myCardHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;text-align:center"><div style="font-size:13px;color:#475569">Tổng số người đã tham gia dự đoán: <b>${list.length}</b> • Tổng lượt bình chọn thực tế: <b>${actualTotal}</b></div><div style="font-size:11px;color:#94a3b8;margin-top:4px">Nhập SĐT và dự đoán để tham gia — nếu SĐT bạn trùng top 3 sẽ được tuyên dương tại đây</div></div>`;
+      myCardHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;text-align:center"><div style="font-size:13px;color:#475569">Tổng số người đã tham gia dự đoán: <b>${list.length}</b> • Tổng lượt bình chọn thực tế: <b>${actualTotal}</b></div><div style="font-size:11px;color:#94a3b8;margin-top:4px">Nhập SĐT và dự đoán để tham gia — nếu SĐT bạn trùng top 3 sẽ được tuyên dương tại đây</div><button onclick="document.getElementById('tongDuDoanInput')?.focus(); document.getElementById('tongDuDoanInput')?.scrollIntoView({behavior:'smooth',block:'center'})" style="margin-top:10px;padding:10px 16px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.25)">Nhập tổng số người tham gia bình chọn linh vật</button></div>`;
     }
   }catch(e){ myCardHtml=''; }
+  // Ẩn leaderboard cho khán giả, giữ thẻ dự đoán của bạn nổi bật
+  resultHtml='';
+  // làm nổi bật myCard: thêm viền + shadow nếu có
+  if(myCardHtml){
+    myCardHtml = myCardHtml.replace('border:1px solid #e2e8f0', 'border:2px solid #7c3aed').replace('box-shadow:0 2px 8px rgba(0,0,0,.06)', 'box-shadow:0 8px 24px rgba(124,58,237,.22)').replace('border:2px solid #f59e0b', 'border:2px solid #7c3aed; outline:3px solid #ede9fe');
+  }
   c.innerHTML=banner+myCardHtml+formHtml+resultHtml;
 }
 function dudoan(stt,btn){
@@ -1032,6 +1032,46 @@ function dudoan(stt,btn){
   if(!config){ showDuDoanStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
   openDuDoanModal(stt,btn);
 }
+async function submitTongDuDoan(){
+  const done=localStorage.getItem(DUDOAN_DONE_KEY);
+  if(done){ showDuDoanStatus('⚠️ Bạn đã dự đoán rồi — 1 ĐT chỉ 1 lần','error'); return; }
+  if(!config){ showDuDoanStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
+  const el=document.getElementById('tongDuDoanInput');
+  const v=el? parseInt(el.value): NaN;
+  if(isNaN(v) || v<0 || v>1000000){ showDuDoanStatus('⚠️ Vui lòng nhập số dự đoán hợp lệ (0 - 1000000)','error'); if(el) el.focus(); return; }
+  const sdt=getSdtOrAlert(); if(!sdt) return;
+  const btn=document.querySelector('#tongDuDoanInput + button');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Đang gửi...'; }
+  try{
+    const device_id=getDeviceId();
+    const aud=getAudienceInfo();
+    let payloadDD={device_id, stt_du_doan: v, sdt:sdt, tong_du_doan: v};
+    if(aud){ payloadDD.ho_ten=aud.ten; payloadDD.thon=aud.thon; payloadDD.ten=aud.ten; }
+    let r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payloadDD)});
+    if(!r.ok){
+      const t0=await r.text();
+      if(t0.includes('tong_du_doan')||t0.includes('column')||t0.includes('PGRST204')){
+        const fallback={device_id, stt_du_doan: v, sdt:sdt};
+        if(aud){ fallback.ho_ten=aud.ten; fallback.thon=aud.thon; fallback.ten=aud.ten; }
+        r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(fallback)});
+        if(r.ok){ try{localStorage.setItem(DUDOAN_DONE_KEY,String(v));}catch(e){} buildDuDoanUI(); setTimeout(()=> showDuDoanStatus('✅ Đã gửi dự đoán '+v+' người!','success'), 150); return; }
+        throw new Error(t0);
+      }
+      if(t0.includes('duplicate')||t0.includes('23505')||t0.includes('unique')){
+        try{localStorage.setItem(DUDOAN_DONE_KEY,String(v));}catch(e){}
+        buildDuDoanUI(); setTimeout(()=> showDuDoanStatus('⚠️ Thiết bị này đã dự đoán rồi','error'), 150); return;
+      }
+      throw new Error(t0);
+    }
+    try{localStorage.setItem(DUDOAN_DONE_KEY,String(v));}catch(e){}
+    buildDuDoanUI(); setTimeout(()=> showDuDoanStatus('✅ Đã gửi dự đoán '+v+' người!','success'), 150);
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Nhập tổng số người tham gia bình chọn linh vật'; }
+    const msg=e.message&&e.message.includes('PGRST205')?'❌ Chưa tạo bảng du_doan — chạy SQL dưới.':('❌ Lỗi: '+e.message.substring(0,150));
+    showDuDoanStatus(msg,'error');
+  }
+}
+
 async function confirmDuDoan(){
   if(!pendingDuDoan) return;
   const sdt=getSdtOrAlert();
@@ -1042,20 +1082,20 @@ async function confirmDuDoan(){
   try{
     const device_id=getDeviceId();
     const aud=getAudienceInfo();
-    let payloadDD={device_id, stt_du_doan:stt, sdt:sdt};
+    let payloadDD={device_id, stt_du_doan:stt, sdt:sdt, tong_du_doan: stt};
     if(aud){ payloadDD.ho_ten=aud.ten; payloadDD.thon=aud.thon; payloadDD.ten=aud.ten; }
     let r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payloadDD)});
     if(!r.ok){
       const t0=await r.text();
       if(t0.includes('ho_ten')||t0.includes('thon')||t0.includes('column')||t0.includes('PGRST204')){
-        const fallback={device_id, stt_du_doan:stt, sdt:sdt};
+        const fallback={device_id, stt_du_doan:stt, sdt:sdt, tong_du_doan: stt};
         r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(fallback)});
-        if(r.ok){ try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){} showDuDoanStatus('✅ Đã ghi nhận dự đoán! Chờ kết quả chấm','success'); buildDuDoanUI(); return; }
+        if(r.ok){ try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){} buildDuDoanUI(); setTimeout(()=> showDuDoanStatus('✅ Đã gửi dự đoán!','success'), 150); return; }
         throw new Error(t0);
       }
       if(t0.includes('duplicate')||t0.includes('23505')||t0.includes('unique')){
         try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){}
-        showDuDoanStatus('⚠️ Thiết bị này đã dự đoán rồi','error'); buildDuDoanUI(); return;
+        buildDuDoanUI(); setTimeout(()=> showDuDoanStatus('⚠️ Thiết bị này đã dự đoán rồi','error'), 150); return;
       }
       throw new Error(t0);
     }

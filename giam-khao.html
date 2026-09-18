@@ -766,15 +766,10 @@ async function buildVoteUI(){
   }catch(e){}
   let banner='';
   const mVoted=done?MODELS.find(x=>String(x.stt)===String(done)):null;
-  const mDuDoan=doneDuDoan?MODELS.find(x=>String(x.stt)===String(doneDuDoan)):null;
-  if(done && doneDuDoan){
-    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn STT ${done}${mVoted?': '+mVoted.name:''} và dự đoán STT ${doneDuDoan}${mDuDoan?': '+mDuDoan.name:''} — mỗi loại 1 lần/ĐT</div>`;
-  } else if(done){
-    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn: STT ${done}. ${mVoted?mVoted.name:''} — bạn vẫn có thể dự đoán giải Nhất (1 lần)</div>`;
-  } else if(doneDuDoan){
-    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: STT ${doneDuDoan}. ${mDuDoan?mDuDoan.name:''} — bạn vẫn có thể bình chọn yêu thích (1 lần)</div>`;
+  if(done){
+    banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn: STT ${done}. ${mVoted?mVoted.name:''} — mỗi thiết bị chỉ 1 lần</div>`;
   } else {
-    banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích và 🔮 dự đoán 1 linh vật sẽ đạt giải Nhất — mỗi loại 1 lần/ĐT, SĐT để trao thưởng</div>`;
+    banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích — mỗi thiết bị chỉ 1 phiếu bình chọn</div>`;
   }
   let html=banner+`<div class="vote-top-status"><div class="status-bar" id="voteStatus" style="display:none"></div><div class="status-bar" id="dudoanStatus" style="display:none"></div></div><div class="vote-grid">`;
   MODELS.forEach((m,idx)=>{
@@ -798,7 +793,7 @@ async function buildVoteUI(){
     const dis2=anyDuDoan?'disabled':'';
     const duDoanBadgeBg=soDuDoan===0?'#eceff1':'#ede9fe';
     const duDoanBadgeColor=soDuDoan===0?'#78909c':'#5b21b6';
-    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div><div style="background:${duDoanBadgeBg};min-width:46px;text-align:center;padding:3px 8px;border-radius:10px;color:${duDoanBadgeColor};font-weight:bold;font-size:11px;border:1px solid ${soDuDoan===0?'#cfd8dc':'#ddd6fe'}">${soDuDoan} dự đoán</div></div></div><div class="vote-card-body"><div class="vote-count" style="color:${countColor}">Phiếu: <b>${soPhieu}</b> · Dự đoán: <b style="color:${soDuDoan? '#5b21b6':'#90a4ae'}">${soDuDoan}</b></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button><button class="${duDoanClass}" ${dis2} onclick="dudoan(${m.stt},this)" style="${isThisDuDoan?'':'background:#ede9fe;color:#5b21b6;border-color:#ddd6fe'}">${duDoanText}</button></div></div></div>`;
+    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div></div></div><div class="vote-card-body"><div class="vote-count" style="color:${countColor}">Phiếu: <b>${soPhieu}</b></div><div><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button></div></div></div>`;
   });
   html+=`</div>`;
   c.innerHTML=html;
@@ -1165,7 +1160,7 @@ async function loadSummary(){
     const rankMap={}; sorted.forEach((r,i)=>{ if(i>0 && r.diem_tb===sorted[i-1].diem_tb) rankMap[r.stt]=rankMap[sorted[i-1].stt]; else rankMap[r.stt]=i+1; });
     rows.forEach(r=> r.hang=rankMap[r.stt]);
     rows.sort((a,b)=> a.hang-b.hang || a.stt-b.stt);
-    let html=`<div class="summary-wrap"><div class="summary-head"><h2>📊 Bảng tổng hợp điểm (${rows.length} mô hình)</h2><button onclick="loadSummary()">↻ Làm mới</button></div><div class="table-scroll"><table class="summary-table"><thead><tr><th>Hạng</th><th>STT</th><th>Tên mô hình</th><th>Đơn vị</th><th>GK Lợi</th><th>GK Hiếu</th><th>GK Hùng</th><th>GK Loan</th><th>GK Cường</th><th>TB</th><th>🗳️ Khán giả</th><th>🔮 Dự đoán</th></tr></thead><tbody>`;
+    let html=`<div class="summary-wrap"><div class="summary-head"><h2>📊 Bảng tổng hợp điểm (${rows.length} mô hình)</h2><button onclick="loadSummary()">↻ Làm mới</button></div><div class="table-scroll"><table class="summary-table"><thead><tr><th>Hạng</th><th>STT</th><th>Tên mô hình</th><th>Đơn vị</th><th>GK Lợi</th><th>GK Hiếu</th><th>GK Hùng</th><th>GK Loan</th><th>GK Cường</th><th>TB</th><th>🗳️ Bình chọn</th><th>🔮 Dự đoán</th></tr></thead><tbody>`;
     rows.forEach(r=>{
       const rc=r.hang===1?'rank-1':r.hang===2?'rank-2':r.hang===3?'rank-3':'';
       const bc=r.hang===1?'badge-1':r.hang===2?'badge-2':r.hang===3?'badge-3':'';
