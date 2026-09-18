@@ -191,22 +191,6 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
 .audience-btn:disabled{opacity:.6;cursor:not-allowed;filter:none;transform:none}
 .audience-foot{margin-top:10px;text-align:center;font-size:12px;color:#94a3b8}
 .audience-badge{margin:0 20px 14px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:8px 12px;font-size:12px;color:#475569;text-align:center}
-.judge-pin-overlay{position:fixed;inset:0;background:rgba(127,29,29,.45);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
-.judge-pin-overlay.open{display:flex}
-.judge-pin-modal{background:#fff;border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.2);max-width:380px;width:100%;overflow:hidden;animation:pop .2s ease}
-.judge-pin-head{padding:20px 20px 0;text-align:center}
-.judge-pin-icon{width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,#fde68a,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:28px}
-.judge-pin-title{font-weight:800;color:#7f1d1d;font-size:17px}
-.judge-pin-sub{font-size:13px;color:#78716c;margin-top:4px;line-height:1.4}
-.judge-pin-body{padding:16px 20px}
-.judge-pin-input{width:100%;padding:12px;border:1px solid #fde68a;border-radius:10px;text-align:center;letter-spacing:4px;font-size:18px;font-weight:700}
-.judge-pin-input:focus{outline:none;border-color:#991b1b;box-shadow:0 0 0 3px rgba(127,29,29,.12)}
-.judge-pin-input.err{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
-.judge-pin-actions{display:flex;gap:10px;padding:0 20px 20px}
-.judge-pin-btn{flex:1;padding:12px;border-radius:10px;font-weight:700;border:none;cursor:pointer}
-.judge-pin-btn.cancel{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
-.judge-pin-btn.confirm{background:#991b1b;color:#fff;box-shadow:0 4px 12px rgba(127,29,29,.2)}
-.judge-pin-hint{font-size:11px;color:#a8a29e;margin-top:6px;text-align:center}
 
 </style>
 </head>
@@ -215,31 +199,13 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
   <h1>🎯 Mô hình Trung Thu 2026</h1>
   <div class="judge-badge" id="judgeName">Giám khảo</div>
 </div>
-<div class="judge-pin-overlay" id="judgePinOverlay" onclick="if(event.target===this) return;">
-  <div class="judge-pin-modal">
-    <div class="judge-pin-head">
-      <div class="judge-pin-icon">🔒</div>
-      <div class="judge-pin-title" id="judgePinTitle">Nhập mã PIN giám khảo</div>
-      <div class="judge-pin-sub" id="judgePinSub">Vui lòng nhập mã PIN được BTC cấp riêng</div>
-    </div>
-    <div class="judge-pin-body">
-      <input id="judgePinInput" type="password" inputmode="numeric" maxlength="4" class="judge-pin-input" placeholder="••••">
-      <div class="judge-pin-hint">Liên hệ BTC nếu quên mã</div>
-    </div>
-    <div class="judge-pin-actions">
-      <button class="judge-pin-btn cancel" onclick="location.href='/'">Về trang chủ</button>
-      <button class="judge-pin-btn confirm" onclick="confirmJudgePin()">Xác nhận</button>
-    </div>
-  </div>
-</div>
-
 <div class="container">
   <div class="config-bar" id="configBar" style="display:none">
     <input type="hidden" id="supabaseUrl">
     <input type="hidden" id="supabaseKey">
   </div>
   <div class="tab-bar" id="tabBar"></div>
-  <!-- audienceEntry removed for giam-khao -->
+  <div id="audienceEntry" style="display:none"></div>
   <div id="modelsContainer"></div>
   <div id="summaryContainer" style="display:none"></div>
   <div id="voteContainer" style="display:none"></div>
@@ -352,8 +318,6 @@ const CRITERIA=[
 const JUDGES=["loi","hieu","hung","loan","cuong"];
 const JN={loi:"Lợi",hieu:"Hiếu",hung:"Hùng",loan:"Loan",cuong:"Cường"};
 const J_MAP = {"vkxl": "loi", "7k1e": "hieu", "h1jw": "hung", "l7w7": "loan", "sn24": "cuong"};
-const PIN_HASH = {"vkxl": "cf830153793c89f335238980bb4b0aa3214c8189a45ff5c8700195fdd73ecccb", "7k1e": "e2b79c6b00bc97ebb7a345ef636f2fe539aaa43946bf7d6c8052a22b22462649", "h1jw": "5805921783d4f48c7ddacf69382814a769b81b318735bc11ea309b2fa4e5a47b", "l7w7": "e1972d242ea4f7307af9d94d44b6ebe3afea30a30a974d4976f8131cbec1e232", "sn24": "567c38161a125f1d049703d0e67e1062fdd9b975ecf00688cc61415c997e71c6"};
-async function sha256(s){ const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function getJudgeFromJ(){
   const j=new URLSearchParams(location.search).get("j");
   if(j && J_MAP[j]) return J_MAP[j];
@@ -363,42 +327,6 @@ function getJudgeFromJ(){
   if(j && ["loi","hieu","hung","loan","cuong"].includes(j)) return j;
   return null;
 }
-function openJudgePinModal(judge, jCode){
-  const title=document.getElementById('judgePinTitle');
-  const sub=document.getElementById('judgePinSub');
-  const name=JN[judge]||judge;
-  if(title) title.textContent=`Nhập mã PIN - GK `+name;
-  if(sub) sub.textContent=`Link ?j=${jCode} yêu cầu mã PIN riêng`;
-  document.getElementById('judgePinInput').value='';
-  document.getElementById('judgePinInput').classList.remove('err');
-  document.getElementById('judgePinOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('judgePinInput').focus(),100);
-}
-async function confirmJudgePin(){
-  const inp=document.getElementById('judgePinInput');
-  const v=inp.value.trim();
-  if(!v){ inp.classList.add('err'); inp.focus(); return; }
-  const j=new URLSearchParams(location.search).get("j");
-  const expected=PIN_HASH[j];
-  if(!expected){ alert('Link không hợp lệ'); return; }
-  const h=await sha256(v);
-  if(h!==expected){
-    inp.classList.add('err'); inp.focus();
-    // đếm sai
-    const k='pin_fail_'+j; const cnt=parseInt(sessionStorage.getItem(k)||'0')+1;
-    sessionStorage.setItem(k, String(cnt));
-    if(cnt>=3){ alert('Sai quá 3 lần, thử lại sau 5 phút'); setTimeout(()=>sessionStorage.removeItem(k), 300000); }
-    else alert('Mã PIN không đúng');
-    return;
-  }
-  sessionStorage.setItem('auth_'+j, 'ok');
-  sessionStorage.removeItem('pin_fail_'+j);
-  document.getElementById('judgePinOverlay').classList.remove('open');
-  // reload init flow
-  location.reload();
-}
-
-
 let currentJudge="loi";
 let scores={};
 let config=null;
@@ -484,7 +412,7 @@ function showAudienceDuDoan(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function init(){
-  // --- Gate ?j=xxxx + PIN cho giam-khao ---
+  // --- Gate ?j=xxxx (không PIN) ---
   const jParam=new URLSearchParams(location.search).get("j");
   const judgeFromJ = J_MAP[jParam];
   if(!judgeFromJ){
@@ -508,17 +436,7 @@ function init(){
       return;
     }
   }
-  if(sessionStorage.getItem('auth_'+jParam)!=='ok'){
-    document.getElementById("judgeName").textContent="🔒 Yêu cầu mã PIN";
-    // ẩn nội dung chấm
-    document.getElementById("modelsContainer").style.display="none";
-    document.getElementById("saveBtn").style.display="none";
-    document.getElementById("summaryContainer").style.display="none";
-    buildTabs();
-    openJudgePinModal(judgeFromJ, jParam);
-    return;
-  }
-  // đã auth -> gán currentJudge = judgeFromJ
+  // vào thẳng chấm điểm
   currentJudge = judgeFromJ;
 
   // giam-khao.html: luôn ở chế độ giám khảo
@@ -771,7 +689,8 @@ function switchJudge(j,btn){
   if(!isSummary && !isVote && !isDuDoan) return;
   persistScores();
   isSummary=false; isVote=false; isDuDoan=false;
-  history.replaceState(null,'',`?judge=${currentJudge}`);
+  const _j=new URLSearchParams(location.search).get("j");
+  history.replaceState(null,'',_j?`?j=${_j}`:`?judge=${currentJudge}`);
   document.getElementById("judgeName").textContent="Giám khảo "+JN[currentJudge];
   document.getElementById("modelsContainer").style.display="";
   document.getElementById("summaryContainer").style.display="none";
@@ -785,7 +704,8 @@ function showSummary(btn){
   if(isSummary) return;
   persistScores();
   isSummary=true; isVote=false; isDuDoan=false;
-  history.replaceState(null,'',`?view=tonghop`);
+  const _j1=new URLSearchParams(location.search).get("j");
+  history.replaceState(null,'',_j1?`?j=${_j1}&view=tonghop`:`?view=tonghop`);
   document.getElementById("judgeName").textContent="📊 Tổng hợp điểm";
   document.getElementById("modelsContainer").style.display="none";
   document.getElementById("saveBtn").style.display="none";
@@ -799,7 +719,8 @@ function showVote(){
   if(isVote) return;
   persistScores();
   isVote=true; isSummary=false; isDuDoan=false;
-  history.replaceState(null,'',`?view=binhchon`);
+  const _j2=new URLSearchParams(location.search).get("j");
+  history.replaceState(null,'',_j2?`?j=${_j2}&view=binhchon`:`?view=binhchon`);
   document.getElementById("judgeName").textContent="🗳️ Bình chọn khán giả";
   document.getElementById("modelsContainer").style.display="none";
   document.getElementById("summaryContainer").style.display="none";
@@ -813,7 +734,8 @@ function showDuDoan(){
   if(isDuDoan) return;
   persistScores();
   isDuDoan=true; isSummary=false; isVote=false;
-  history.replaceState(null,'',`?view=dudoan`);
+  const _j3=new URLSearchParams(location.search).get("j");
+  history.replaceState(null,'',_j3?`?j=${_j3}&view=dudoan`:`?view=dudoan`);
   document.getElementById("judgeName").textContent="🔮 Dự đoán kết quả";
   document.getElementById("modelsContainer").style.display="none";
   document.getElementById("summaryContainer").style.display="none";
@@ -1289,7 +1211,8 @@ function maybeShowDesktopPopup(){
     const params=new URLSearchParams(location.search);
     const view=params.get('view');
     const judge=params.get('judge');
-    if(view || judge) return;
+    const jj=params.get('j');
+    if(view || judge || jj) return;
     const el=document.getElementById('desktopPopup');
     if(!el) return;
     setTimeout(()=> el.classList.add('open'), 400);
