@@ -31,10 +31,10 @@ create table if not exists binh_chon_khan_gia (
 );
 create index if not exists idx_binhchon_stt on binh_chon_khan_gia (stt);
 
--- 3. Dự đoán giải Nhất (1 thiết bị = 1 lượt)
+-- 3. Dự đoán TỔNG SỐ NGƯỜI BÌNH CHỌN (1 thiết bị = 1 lượt) — logic mới 2026-09: gần nhất thắng, chia 3 giải Nhất/Nhì/Ba, trùng số thì sớm nhất thắng
 create table if not exists du_doan (
   device_id text not null unique,
-  stt_du_doan int not null,
+  stt_du_doan int not null, -- giữ tương thích: lưu số dự đoán tổng (cũ là STT 1-27)
   sdt varchar(11),
   ho_ten text,
   thon text,
@@ -42,6 +42,10 @@ create table if not exists du_doan (
   created_at timestamptz default now()
 );
 create index if not exists idx_dudoan_stt on du_doan (stt_du_doan);
+-- cột mới cho logic mới (nếu đã có bảng cũ thì thêm)
+alter table du_doan add column if not exists tong_du_doan int;
+update du_doan set tong_du_doan = stt_du_doan where tong_du_doan is null;
+create index if not exists idx_dudoan_tong on du_doan (tong_du_doan);
 
 -- 4. View đếm phiếu (trang bình chọn chỉ cần GET nhẹ, khỏi quét full bảng)
 drop view if exists thong_ke_binh_chon cascade;
@@ -63,16 +67,16 @@ create view bang_tong_hop_diem as
     round(avg(tong_diem), 1) as diem_tb
   from diem_trung_thu_2026 group by stt;
 
--- 5b. View thống kê dự đoán (đếm số người đoán mỗi STT) — dùng DROP để tránh lỗi 42P16 cannot drop columns
+-- 5b. View thống kê dự đoán — giữ tương thích, giờ đếm theo số dự đoán tổng (coalesce tong_du_doan / stt_du_doan)
 drop view if exists thong_ke_du_doan cascade;
 create view thong_ke_du_doan as
-  select stt_du_doan as stt, stt_du_doan, count(*)::int as so_doan, count(*)::int as so_luong
-  from du_doan group by stt_du_doan;
+  select coalesce(tong_du_doan, stt_du_doan) as stt, coalesce(tong_du_doan, stt_du_doan) as stt_du_doan, coalesce(tong_du_doan, stt_du_doan) as tong_du_doan, count(*)::int as so_doan, count(*)::int as so_luong
+  from du_doan group by coalesce(tong_du_doan, stt_du_doan);
 
--- 5c. View public cho danh sách dự đoán (che SĐT nếu cần, vẫn cho anon đọc)
+-- 5c. View public cho danh sách dự đoán (che SĐT nếu cần, vẫn cho anon đọc) — bao gồm tong_du_doan cho logic mới
 drop view if exists v_du_doan_public cascade;
 create view v_du_doan_public as
-  select device_id, sdt, ho_ten, thon, ten, stt_du_doan, created_at from du_doan;
+  select device_id, sdt, ho_ten, thon, ten, stt_du_doan, tong_du_doan, coalesce(tong_du_doan, stt_du_doan) as du_doan_tong, created_at from du_doan;
 
 -- 6. Quyền cho app (dùng anon key gọi trực tiếp, không login)
 grant usage on schema public to anon;

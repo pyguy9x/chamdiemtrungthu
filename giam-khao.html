@@ -929,8 +929,8 @@ function openDuDoanModal(stt,btn){
   card.style.borderColor=tc;
   document.querySelector('#voteModal .vote-modal-icon').textContent='🔮';
   document.querySelector('#voteModal .vote-modal-title').textContent='Bạn có chắc chắn không?';
-  document.querySelector('#voteModal .vote-modal-sub').textContent=`Chọn đúng STT và linh vật bạn đoán sẽ đạt giải Nhất (STT phân biệt thôn)`;
-  document.querySelector('#voteModal .vote-modal-note').textContent='🏆 Phải đoán đúng cả STT + linh vật — người đoán đúng STT sớm nhất thắng';
+  document.querySelector('#voteModal .vote-modal-sub').textContent=`Dự đoán tổng số người tham gia bình chọn — ai gần nhất thắng`;
+  document.querySelector('#voteModal .vote-modal-note').textContent='🏆 Gần nhất thắng — trùng số thì gửi sớm thắng (3 giải Nhất/Nhì/Ba)';
   document.getElementById('voteModalConfirm').textContent='Xác nhận dự đoán';
   document.getElementById('voteModalConfirm').onclick=confirmDuDoan;
   document.querySelector('#voteModal .vote-sdt-wrap').style.display='none';
@@ -953,116 +953,139 @@ openVoteModal=function(stt,btn){
 async function buildDuDoanUI(){
   const c=document.getElementById("dudoanContainer");
   const done=localStorage.getItem(DUDOAN_DONE_KEY);
-  let winnerStt=null;
+  const doneVal=done? parseInt(done): null;
+  // lấy tổng số người bình chọn thực tế
+  let actualTotal=0;
   try{
-    const r=await fetch(`${config.url}/rest/v1/bang_tong_hop_diem?select=stt,diem_tb&order=diem_tb.desc&order=stt.asc&limit=1`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(r.ok){ const rows=await r.json(); if(rows.length) winnerStt=rows[0].stt; }
-  }catch(e){}
-  // đếm số người đoán mỗi STT (ưu tiên view public, fallback bảng gốc)
-  let counts={};
-  try{
-    const rv=await fetch(`${config.url}/rest/v1/thong_ke_du_doan?select=*`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(rv.ok){ const rows=await rv.json(); rows.forEach(x=> counts[x.stt??x.stt_du_doan]=(counts[x.stt??x.stt_du_doan]||0)+(x.so_doan??x.so_luong??1)); }
-    else { const r=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}}); if(r.ok){ const rows=await r.json(); rows.forEach(x=> counts[x.stt_du_doan]=(counts[x.stt_du_doan]||0)+1); } }
-  }catch(e){}
-  let banner='';
-  if(done){
-    const m=MODELS.find(x=>String(x.stt)===String(done));
-    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: ${m?`STT ${m.stt}. ${m.name} (${m.unit})`:''} — 1 ĐT chỉ 1 lần (phải đúng STT mới tính)</div>`;
-  } else {
-    banner=`<div class="vote-banner open" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);color:#5b21b6;border-color:#ddd6fe">🔮 Chọn đúng STT và linh vật bạn đoán sẽ đạt giải Nhất (VD: Ngôi sao STT 2 khác STT 14). Người đoán đúng STT sớm nhất thắng!</div>`;
-  }
-  let winnerInfo='';
-  // Ẩn "Hiện tại dẫn đầu" ở khán giả theo yêu cầu — giữ trống để không hiện
-  // if(winnerStt){ ... } else { ... }
-  // Chuẩn bị kết quả lên đầu (trước grid) để dễ thấy trên ĐT
-  let resultHtml='';
-  if(winnerStt){
-    try{
-      let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?stt_du_doan=eq.${winnerStt}&select=*&order=created_at.asc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-      if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?stt_du_doan=eq.${winnerStt}&select=device_id,sdt,stt_du_doan,created_at&order=created_at.asc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-      if(r.ok){
-        const rows=await r.json();
-        if(rows.length){
-          const wm2=MODELS.find(x=>x.stt===winnerStt);
-          resultHtml=`<div style="margin-bottom:12px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);max-width:100%"><div style="padding:12px 14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;word-break:normal;overflow-wrap:break-word"><span style="font-weight:800;min-width:0;flex:1 1 160px;word-break:normal;overflow-wrap:break-word;white-space:normal;line-height:1.35">🏅 Kết quả dự đoán — ${wm2?`STT ${wm2.stt}. ${wm2.name} (${wm2.unit})`:''} (giải Nhất)</span><span style="background:#fff;color:#7c3aed;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800;white-space:nowrap;flex-shrink:0">${rows.length} người đoán đúng STT</span></div><div style="padding:10px 12px;background:#f5f3ff;color:#5b21b6;font-size:12px;text-align:center;word-break:normal;overflow-wrap:break-word;white-space:normal">🥇 Phải đúng STT mới tính — nếu nhiều người đoán đúng STT, người gửi sớm nhất (theo <code>created_at</code>) được trao thưởng</div><div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:460px;table-layout:auto"><thead><tr style="background:#ede9fe;color:#5b21b6"><th style="padding:8px 10px;text-align:center">Hạng</th><th style="padding:8px 10px;text-align:left">SĐT (trao thưởng)</th><th style="padding:8px 10px;text-align:center">Dự đoán</th><th style="padding:8px 10px;text-align:left">Thời gian gửi</th><th style="padding:8px 10px;text-align:center">Thiết bị</th></tr></thead><tbody>`;
-          rows.forEach((x,i)=>{
-            const d=new Date(x.created_at);
-            const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-            const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
-            const rank=i===0?'<span style="background:#ff6f00;color:#fff;padding:2px 8px;border-radius:12px;font-weight:800;white-space:nowrap;display:inline-block">🥇 1</span>':(i===1?'<span style="background:#8e24aa;color:#fff;padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block">🥈 2</span>':(i===2?'<span style="background:#1565c0;color:#fff;padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block">🥉 3</span>':`<span style="background:#eceff1;color:#37474f;padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block">${i+1}</span>`));
-            const rowBg=i===0?'background:linear-gradient(90deg,#fff8e1,#ffecb3)':(i%2===0?'background:#fafbff':'');
-            resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center;white-space:nowrap">${rank}</td><td style="padding:8px 10px;font-weight:700;color:#37474f;white-space:nowrap">${sdtMask}</td><td style="padding:8px 10px;text-align:center"><span style="background:${totalColor((winnerStt-1)%12)};color:#37474f;padding:3px 8px;border-radius:8px;font-weight:700;border:1px solid rgba(0,0,0,.06);display:inline-block;max-width:160px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.3;text-align:center;vertical-align:middle">${(()=>{const m=MODELS.find(z=>z.stt===x.stt_du_doan); return m?`STT ${m.stt}. ${m.name} (${m.unit})`:''})()}</span></td><td style="padding:8px 10px;color:#455a64">${s}</td><td style="padding:8px 10px;text-align:center;color:#78909c;font-size:11px">${x.device_id.substring(0,8)}…</td></tr>`;
-          });
-          resultHtml+=`</tbody></table></div></div>`;
-        } else {
-          const _wmEmpty=MODELS.find(x=>x.stt===winnerStt);
-          resultHtml=`<div style="margin-bottom:12px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#78909c">Chưa có ai đoán đúng ${(_wmEmpty?_wmEmpty.name:'')} — hãy là người đầu tiên!</div>`;
-        }
-      }
-    }catch(e){}
-  } else {
-    try{
-      let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.desc&limit=5`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-      if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=5`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-      if(r.ok){
-        const rows=await r.json();
-        if(rows.length){
-          resultHtml=`<div style="margin-bottom:12px;background:#fff;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-weight:800;color:#5b21b6;margin-bottom:8px">🕒 5 dự đoán mới nhất</div><div style="display:grid;gap:6px">`;
-          rows.forEach(x=>{
-            const m=MODELS.find(z=>z.stt===x.stt_du_doan);
-            const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-            const sdtM=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
-            resultHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;background:#f5f3ff;border-radius:8px;font-size:12px;min-width:0"><span style="min-width:0;word-break:normal;overflow-wrap:break-word;white-space:normal"><b>${m?`STT ${m.stt}. ${m.name} (${m.unit})`:''}</b></span><span style="color:#78909c;word-break:normal;overflow-wrap:break-word;white-space:normal;text-align:right;flex-shrink:0">${sdtM} · ${s}</span></div>`;
-          });
-          resultHtml+=`</div></div>`;
-        }
-      }
-    }catch(e){}
-  }
-  // Danh sách chi tiết tất cả khán giả đã dự đoán
-  let listHtml='';
-  try{
-    let rows=[];
-    let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(!r.ok){
-      const t=await r.text();
-      if(t.includes('ho_ten')||t.includes('thon')||t.includes('column')||t.includes('PGRST204')){
-        r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=100`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-      }
-    }
-    if(r && r.ok) rows=await r.json();
-    if(rows.length){
-      listHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);max-width:100%"><div style="padding:12px 14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-weight:800;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><span>📊 Kết quả dự đoán (${rows.length})</span><span style="background:#fff;color:#6366f1;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:800">${rows.length} lượt</span></div><div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px;table-layout:auto"><thead><tr style="background:#f0f9ff;color:#0369a1"><th style="padding:8px 10px;text-align:center">#</th><th style="padding:8px 10px;text-align:left">Họ tên</th><th style="padding:8px 10px;text-align:left">Thôn</th><th style="padding:8px 10px;text-align:left">SĐT</th><th style="padding:8px 10px;text-align:center">Dự đoán</th><th style="padding:8px 10px;text-align:left">Thời gian</th></tr></thead><tbody>`;
-      rows.forEach((x,i)=>{
-        const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-        const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
-        const ten = (x.ho_ten||x.ten||'').trim() || '—';
-        const thon = (x.thon||'').trim() || '—';
-        const m=MODELS.find(z=>z.stt===x.stt_du_doan); const duDoanName=m?`STT ${m.stt}. ${m.name} (${m.unit})`:`STT ${x.stt_du_doan}`;
-        const rowBg=i%2===0?'background:#fff':'background:#f8fafc';
-        listHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${i+1}</td><td style="padding:8px 10px;font-weight:600;word-break:normal;overflow-wrap:break-word;max-width:140px">${ten}</td><td style="padding:8px 10px;word-break:normal;overflow-wrap:break-word;max-width:120px">${thon}</td><td style="padding:8px 10px;font-weight:600;white-space:nowrap">${sdtMask}</td><td style="padding:8px 10px;text-align:center"><span style="background:${totalColor((x.stt_du_doan-1)%12)};color:#37474f;padding:3px 8px;border-radius:8px;font-weight:700;border:1px solid rgba(0,0,0,.06);display:inline-block;max-width:160px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.3;text-align:center">${duDoanName}</span></td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
-      });
-      listHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Hiển thị ${rows.length} lượt gần nhất • SĐT che 4 số giữa để bảo mật</div></div>`;
-    } else {
-      listHtml=`<div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.06)">Chưa có ai dự đoán — hãy là người đầu tiên!</div>`;
+    let r=await fetch(`${config.url}/rest/v1/thong_ke_binh_chon?select=so_phieu`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok){ const rows=await r.json(); rows.forEach(x=> actualTotal+= (x.so_phieu||0)); }
+    else {
+      const r2=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia?select=device_id`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r2.ok){ const rows2=await r2.json(); actualTotal=rows2.length; }
     }
   }catch(e){}
-  let grid=`<div class="vote-grid" style="margin-bottom:14px">`;
-  MODELS.forEach((m,idx)=>{
-    const tc=totalColor(idx);
-    const n=counts[m.stt]||0;
-    const isThis=String(done)===String(m.stt);
-    const dis=done?'disabled':'';
-    const txt=isThis?'✅ Đã đoán':(done?'Đã khóa':'🔮 Dự đoán');
-    const cls=isThis?'vote-btn voted':'vote-btn';
-    grid+=`<div class="vote-card" style="border-left-color:${tc}"><div class="vote-card-head"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div class="total" style="background:${n?tc:'#eceff1'}">${n} dự đoán</div></div><div class="vote-card-body"><button class="${cls}" ${dis} onclick="dudoan(${m.stt},this)" style="${isThis?'':'background:#ede9fe;color:#5b21b6;border-color:#ddd6fe'}">${txt}</button></div></div>`;
+  // lấy danh sách dự đoán
+  let rows=[];
+  try{
+    let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(r.ok) rows=await r.json();
+    // fallback nếu view thiếu cột tong_du_doan nhưng bảng có
+    if(rows.length && rows[0].tong_du_doan===undefined){
+      try{
+        const r3=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+        if(r3.ok) rows=await r3.json();
+      }catch(e){}
+    }
+  }catch(e){}
+  let list=rows.map(r=>{
+    const raw = r.tong_du_doan!=null? r.tong_du_doan : r.stt_du_doan;
+    const pred = parseInt(raw);
+    const diff = Math.abs((isNaN(pred)?0:pred) - actualTotal);
+    return {...r, _pred: isNaN(pred)?0:pred, _diff: diff };
   });
-  grid+=`</div>`;
-  let html=banner+`<div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>`+grid+winnerInfo+resultHtml+listHtml;
-  c.innerHTML=html;
+  list.sort((a,b)=> a._diff - b._diff || new Date(a.created_at) - new Date(b.created_at));
+  let banner='';
+  if(doneVal!==null && !isNaN(doneVal)){
+    const myDiff=Math.abs(doneVal - actualTotal);
+    banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: <b>${doneVal} người</b> • Tổng thực tế: <b>${actualTotal} người</b> • Chênh lệch: <b>${myDiff}</b> — 1 ĐT chỉ 1 lần</div>`;
+  } else {
+    banner=`<div class="vote-banner open" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);color:#5b21b6;border-color:#ddd6fe">🔮 Dự đoán <b>tổng số người tham gia bình chọn</b> — ai gần nhất thắng! Hiện tại: <b>${actualTotal} lượt</b> • Chia 3 giải Nhất/Nhì/Ba, trùng số thì gửi sớm thắng</div>`;
+  }
+  let formHtml='';
+  if(doneVal===null || isNaN(doneVal)){
+    formHtml=`<div style="margin-bottom:14px;background:#fff;border-radius:12px;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #ddd6fe">
+      <div style="font-weight:800;color:#5b21b6;margin-bottom:8px">📝 Nhập dự đoán của bạn</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="tongDuDoanInput" type="number" min="0" max="1000000" step="1" placeholder="VD: ${Math.max(0, actualTotal+10)}" style="flex:1 1 160px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px">
+        <button onclick="submitTongDuDoan()" style="padding:10px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:10px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.25)">Gửi dự đoán</button>
+      </div>
+      <div style="font-size:12px;color:#64748b;margin-top:6px">Nhập số nguyên ≥0 (VD: 350). Mỗi SĐT/ĐT chỉ 1 lần, gửi sớm thắng nếu trùng số.</div>
+      <div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>
+    </div>`;
+  } else {
+    formHtml=`<div class="vote-top-status"><div class="status-bar" id="dudoanStatus" style="display:none"></div></div>`;
+  }
+  let resultHtml='';
+  if(list.length){
+    const top3=list.slice(0,3);
+    resultHtml+=`<div style="margin-bottom:12px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)"><div style="padding:12px 14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-weight:800;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><span>🏆 Bảng xếp hạng dự đoán — Tổng thực tế: ${actualTotal}</span><span style="background:#fff;color:#7c3aed;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:800">${list.length} lượt</span></div>`;
+    resultHtml+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;background:#f5f3ff">`;
+    const prizes=['🥇 Giải Nhất','🥈 Giải Nhì','🥉 Giải Ba'];
+    const prizeColors=['linear-gradient(90deg,#fff8e1,#ffecb3)','linear-gradient(90deg,#f3e5f5,#e1bee7)','linear-gradient(90deg,#e3f2fd,#bbdefb)'];
+    top3.forEach((x,i)=>{
+      const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+      const ten=(x.ho_ten||x.ten||'—').trim();
+      resultHtml+=`<div style="background:${prizeColors[i]};border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(0,0,0,.06)"><div style="font-weight:800;color:#5b21b6">${prizes[i]}</div><div style="font-weight:700;margin:6px 0">${ten}</div><div style="font-size:12px;color:#475569">${sdtMask}</div><div style="margin-top:6px;background:#fff;padding:4px 8px;border-radius:20px;font-weight:800;border:1px solid #ddd6fe">${x._pred} người</div><div style="font-size:11px;color:#5b21b6;margin-top:4px">Chênh lệch: ${x._diff}</div></div>`;
+    });
+    if(list.length<3){
+      for(let i=list.length;i<3;i++){ resultHtml+=`<div style="background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;text-align:center;color:#94a3b8">Chưa có<br>${prizes[i]}</div>`; }
+    }
+    resultHtml+=`</div>`;
+    resultHtml+=`<div class="table-scroll" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px"><thead><tr style="background:#ede9fe;color:#5b21b6"><th style="padding:8px 10px">Hạng</th><th style="padding:8px 10px;text-align:left">Họ tên</th><th style="padding:8px 10px;text-align:left">Thôn</th><th style="padding:8px 10px;text-align:left">SĐT</th><th style="padding:8px 10px">Dự đoán</th><th style="padding:8px 10px">Chênh lệch</th><th style="padding:8px 10px;text-align:left">Thời gian</th></tr></thead><tbody>`;
+    list.forEach((x,i)=>{
+      const rank=i+1;
+      const badge= rank===1?'<span style="background:#ff6f00;color:#fff;padding:2px 8px;border-radius:12px;font-weight:800">🥇 1</span>': rank===2?'<span style="background:#8e24aa;color:#fff;padding:2px 8px;border-radius:12px">🥈 2</span>': rank===3?'<span style="background:#1565c0;color:#fff;padding:2px 8px;border-radius:12px">🥉 3</span>':`<span style="background:#eceff1;color:#37474f;padding:2px 8px;border-radius:12px">${rank}</span>`;
+      const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+      const ten=(x.ho_ten||x.ten||'—').trim();
+      const thon=(x.thon||'').trim()||'—';
+      const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const rowBg= rank===1?'background:linear-gradient(90deg,#fff8e1,#ffecb3)': (i%2===0?'background:#fff':'background:#f8fafc');
+      resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${badge}</td><td style="padding:8px 10px;font-weight:600;max-width:140px;word-break:break-word">${ten}</td><td style="padding:8px 10px;max-width:120px;word-break:break-word">${thon}</td><td style="padding:8px 10px;white-space:nowrap;font-weight:600">${sdtMask}</td><td style="padding:8px 10px;text-align:center;font-weight:800">${x._pred}</td><td style="padding:8px 10px;text-align:center;color:${x._diff===0?'#2e7d32':'#5b21b6'};font-weight:700">${x._diff}</td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
+    });
+    resultHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Xếp theo chênh lệch |tổng thực - dự đoán| tăng dần, trùng số thì gửi sớm thắng • Tổng thực tế cập nhật theo lượt bình chọn</div></div>`;
+  } else {
+    resultHtml=`<div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.06)">Chưa có ai dự đoán — hãy là người đầu tiên!</div>`;
+  }
+  c.innerHTML=banner+formHtml+resultHtml;
 }
+function dudoan(stt,btn){
+  // giữ tương thích cũ: stt giờ là số dự đoán tổng
+  const done=localStorage.getItem(DUDOAN_DONE_KEY);
+  if(done){ showDuDoanStatus('⚠️ Bạn đã dự đoán rồi — 1 ĐT chỉ 1 lần','error'); return; }
+  if(!config){ showDuDoanStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
+  openDuDoanModal(stt,btn);
+}
+async function submitTongDuDoan(){
+  const done=localStorage.getItem(DUDOAN_DONE_KEY);
+  if(done){ showDuDoanStatus('⚠️ Bạn đã dự đoán rồi — 1 ĐT chỉ 1 lần','error'); return; }
+  if(!config){ showDuDoanStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
+  const el=document.getElementById('tongDuDoanInput');
+  const v=el? parseInt(el.value): NaN;
+  if(isNaN(v) || v<0 || v>1000000){ showDuDoanStatus('⚠️ Vui lòng nhập số dự đoán hợp lệ (0 - 1000000)','error'); if(el) el.focus(); return; }
+  const sdt=getSdtOrAlert(); if(!sdt) return;
+  const btn=document.querySelector('#tongDuDoanInput + button');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Đang gửi...'; }
+  try{
+    const device_id=getDeviceId();
+    const aud=getAudienceInfo();
+    let payloadDD={device_id, stt_du_doan: v, sdt:sdt, tong_du_doan: v};
+    if(aud){ payloadDD.ho_ten=aud.ten; payloadDD.thon=aud.thon; payloadDD.ten=aud.ten; }
+    let r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payloadDD)});
+    if(!r.ok){
+      const t0=await r.text();
+      if(t0.includes('tong_du_doan')||t0.includes('column')||t0.includes('PGRST204')){
+        const fallback={device_id, stt_du_doan: v, sdt:sdt};
+        if(aud){ fallback.ho_ten=aud.ten; fallback.thon=aud.thon; fallback.ten=aud.ten; }
+        r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(fallback)});
+        if(r.ok){ try{localStorage.setItem(DUDOAN_DONE_KEY,String(v));}catch(e){} showDuDoanStatus('✅ Đã ghi nhận dự đoán '+v+' người! Chờ tổng kết','success'); buildDuDoanUI(); return; }
+        throw new Error(t0);
+      }
+      if(t0.includes('duplicate')||t0.includes('23505')||t0.includes('unique')){
+        try{localStorage.setItem(DUDOAN_DONE_KEY,String(v));}catch(e){}
+        showDuDoanStatus('⚠️ Thiết bị này đã dự đoán rồi','error'); buildDuDoanUI(); return;
+      }
+      throw new Error(t0);
+    }
+    try{localStorage.setItem(DUDOAN_DONE_KEY,String(v));}catch(e){}
+    showDuDoanStatus('✅ Đã ghi nhận dự đoán '+v+' người! Chờ tổng kết','success'); buildDuDoanUI();
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Gửi dự đoán'; }
+    const msg=e.message&&e.message.includes('PGRST205')?'❌ Chưa tạo bảng du_doan — chạy SQL dưới.':('❌ Lỗi: '+e.message.substring(0,150));
+    showDuDoanStatus(msg,'error');
+  }
+}
+
 function dudoan(stt,btn){
   const done=localStorage.getItem(DUDOAN_DONE_KEY);
   if(done){ showDuDoanStatus('⚠️ Bạn đã dự đoán rồi — 1 ĐT chỉ 1 lần','error'); return; }
@@ -1079,13 +1102,13 @@ async function confirmDuDoan(){
   try{
     const device_id=getDeviceId();
     const aud=getAudienceInfo();
-    let payloadDD={device_id, stt_du_doan:stt, sdt:sdt};
+    let payloadDD={device_id, stt_du_doan:stt, sdt:sdt, tong_du_doan: stt};
     if(aud){ payloadDD.ho_ten=aud.ten; payloadDD.thon=aud.thon; payloadDD.ten=aud.ten; }
     let r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payloadDD)});
     if(!r.ok){
       const t0=await r.text();
       if(t0.includes('ho_ten')||t0.includes('thon')||t0.includes('column')||t0.includes('PGRST204')){
-        const fallback={device_id, stt_du_doan:stt, sdt:sdt};
+        const fallback={device_id, stt_du_doan:stt, sdt:sdt, tong_du_doan: stt};
         r=await fetch(`${config.url}/rest/v1/du_doan`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(fallback)});
         if(r.ok){ try{localStorage.setItem(DUDOAN_DONE_KEY,String(stt));}catch(e){} showDuDoanStatus('✅ Đã ghi nhận dự đoán! Chờ kết quả chấm','success'); buildDuDoanUI(); return; }
         throw new Error(t0);
