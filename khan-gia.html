@@ -252,6 +252,8 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
 </div>
 
 <script>
+// Tự xóa localStorage khi mở link ?clear=1 / ?reset=1 / ?xoa=1 (gửi khán giả để họ tự reset)
+try{ const p=new URLSearchParams(location.search); if(p.has('clear')||p.has('reset')||p.has('xoa')){ localStorage.clear(); sessionStorage.clear(); history.replaceState(null,'',location.pathname); alert('Đã xóa dữ liệu cũ trên máy này! Bạn có thể nhập lại họ tên và bình chọn.'); } }catch(e){}
 const MODELS=[
 {stt:1,name:"Hào khí rồng vàng",unit:"Thôn Mậu Đông 1"},
 {stt:2,name:"Đại sứ bạch thỏ",unit:"Thôn Mậu A 5"},
