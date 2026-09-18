@@ -549,8 +549,9 @@ function buildModels(){
       });
       h+=`<div class="criteria-total">Tổng: <span id="csum_${idx}_${crit.id}">0</span>/${crit.max}</div></div>`;
     });
-    return`<div class="model-card" id="card_${idx}" style="border-left-color:${tc}"><div class="model-header" onclick="toggleModel(${idx})"><div><span class="info">STT ${m.stt}. ${m.name}</span><br><span class="unit">${m.unit}</span></div><div class="total" id="mtotal_${idx}" style="background:${tc}">0</div></div><div class="model-body" id="body_${idx}">${h}</div></div>`;
+    return`<div class="model-card" id="card_${idx}" style="border-left-color:${tc}"><div class="model-header" onclick="toggleModel(${idx})"><div><span class="info">STT ${m.stt}. ${m.name}</span><br><span class="unit">${m.unit}</span></div><div class="total" id="mtotal_${idx}" style="background:${tc}">0</div></div><div class="model-body ${idx===0?'open':''}" id="body_${idx}">${h}</div></div>`;
   }).join('');
+  setTimeout(()=>{ try{ document.getElementById('body_0')?.classList.add('open'); }catch(e){} },0);
 }
 
 function sliderHTML(key,max,val){
