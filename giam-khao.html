@@ -255,19 +255,28 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
 <script>
 // Tự xóa localStorage khi mở link ?clear=1 / ?reset=1 / ?xoa=1
 try{ const p=new URLSearchParams(location.search); if(p.has('clear')||p.has('reset')||p.has('xoa')){ localStorage.clear(); sessionStorage.clear(); history.replaceState(null,'',location.pathname); alert('Đã xóa dữ liệu cũ trên máy này!'); } }catch(e){}
+// Chống F12 / DevTools khi cố tình dùng máy tính
+try{
+  document.addEventListener('contextmenu', e=> e.preventDefault());
+  document.addEventListener('keydown', e=>{
+    const k=(e.key||'').toLowerCase();
+    if(e.key==='F12' || (e.ctrlKey&&e.shiftKey&&(k==='i'||k==='j'||k==='c')) || (e.ctrlKey&&(k==='u'||k==='s'))){ e.preventDefault(); e.stopPropagation(); return false; }
+  });
+  setInterval(()=>{ try{ if(window.outerWidth-window.innerWidth>160 || window.outerHeight-window.innerHeight>160){ console.clear(); console.log('%c⚠️ Vui lòng sử dụng điện thoại!','color:red;font-size:16px;font-weight:bold'); } }catch(e){} },2000);
+}catch(e){}
 const MODELS=[
 {stt:1,name:"Hào khí rồng vàng",unit:"Thôn Mậu Đông 1"},
 {stt:2,name:"Đại sứ bạch thỏ",unit:"Thôn Mậu A 5"},
 {stt:3,name:"Ngôi sao An Thịnh 1 - vui trung thu gắn kết cộng đồng",unit:"Thôn An Thịnh 1"},
 {stt:4,name:"Ánh trăng rằm bản em",unit:"Trường Mầm non Sơn Ca"},
-{stt:5,name:"Ký ức quê hương",unit:"Thôn Yên Thái 1"},
+{stt:5,name:"Ký ức quê hương",unit:"Thôn Yên Thái 2"},
 {stt:6,name:"Tết trung thu - trăng sáng trên thác khe cam",unit:"Tiểu học Mậu A 1"},
 {stt:7,name:"Trung thu vùng cao - giữ gìn bản sắc - thắp sáng ước mơ",unit:"Thôn Ngòi A 3"},
 {stt:8,name:"Ánh trăng miền Quế",unit:"Trường Mầm Non Mậu A 1"},
 {stt:9,name:"Cá Chép",unit:"Thôn Ngòi A 1"},
 {stt:10,name:"Vầng trăng khuyết",unit:"Trường THPH Lương Bằng"},
 {stt:11,name:"Đèn Kéo Quân",unit:"Thôn Mậu A 6"},
-{stt:12,name:"Và con đường mơ ước",unit:"Thôn Yên Thái 2"},
+{stt:12,name:"Con đường mơ ước",unit:"Thôn Yên Thái 2"},
 {stt:13,name:"Thiên Mã Đón Trăng",unit:"Trường THCS Mậu A 1"},
 {stt:14,name:"Việt Nam vươn cao - Vui trung thu - thêm tự hào",unit:"Tiểu học Mậu A 2"},
 {stt:15,name:"Phượng hoàng chẩy hội",unit:"Trường Mầm Non Mậu A 2"},
