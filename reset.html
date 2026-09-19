@@ -87,8 +87,13 @@ input{width:100%;padding:10px;border:1px solid #fde68a;border-radius:8px;margin-
       <button class="btn btn-ghost" style="flex:1;min-width:140px;font-size:12px" onclick="previewAudienceJSON()">👁️ Xem trước 5 device</button>
       <span id="csvStat" style="font-size:11px;color:#64748b;align-self:center"></span>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#fef3c7;color:#7f1d1d;border:1px solid #fde68a;font-weight:800" onclick="copyTop3()">🏆 Copy Top 3 (Nhất/Nhì/Ba)</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:140px;font-size:12px" onclick="previewTop3()">👁️ Xem Top 3</button>
+    </div>
     <div class="log" id="csvLog" style="margin-top:8px"></div>
-    <p style="font-size:11px;color:#a8a29e;margin-top:8px">JSON UTF-8 pretty-printed. Gộp theo <code>device_id</code> — nếu chỉ bình chọn hoặc chỉ dự đoán thì field còn lại là <code>null</code>.</p>
+    <div class="log" id="top3Log" style="margin-top:8px;display:none"></div>
+    <p style="font-size:11px;color:#a8a29e;margin-top:8px">JSON UTF-8 pretty-printed. Gộp theo <code>device_id</code> — nếu chỉ bình chọn hoặc chỉ dự đoán thì field còn lại là <code>null</code>. Top 3 xếp theo <code>|dự đoán - tổng thực|</code>, trùng thì gửi sớm thắng.</p>
   </div>
 </div>
 <div class="card" style="max-width:520px">
@@ -243,6 +248,56 @@ async function previewAudienceJSON(){
     return {device_id:dev.substring(0,8)+'…', ho_ten:(b?.ho_ten||d?.ho_ten||'').trim(), thon:(b?.thon||d?.thon||'').trim(), sdt:(b?.sdt||d?.sdt||''), stt:b?b.stt:null, du_doan:duV, created_at_vn:b?toVN(b.created_at):(d?toVN(d.created_at):null)};
   });
   if(clog) clog.textContent=`Xem trước 2 device (tổng ${Object.keys(map).length} device, ${bc.length} phiếu, ${du.length} đoán) — giờ VN Asia/Ho_Chi_Minh:\n`+JSON.stringify(sample,null,2);
+}
+async function getTop3Data(){
+  const data=await fetchAllAudience(); if(!data) return null;
+  const {bc, du}=data;
+  const actualTotal=bc.length;
+  let list=du.map(r=>{
+    const raw=r.tong_du_doan!=null?r.tong_du_doan:r.stt_du_doan;
+    const pred=parseInt(raw); const diff=Math.abs((isNaN(pred)?0:pred)-actualTotal);
+    return {...r, _pred:isNaN(pred)?0:pred, _diff:diff};
+  });
+  list.sort((a,b)=> a._diff - b._diff || parseSupabaseTime(a.created_at) - parseSupabaseTime(b.created_at));
+  const top3=list.slice(0,3);
+  return {actualTotal, top3, bc, du, list};
+}
+function formatTop3Text(top3, actualTotal){
+  const prizes=['🥇 Giải Nhất','🥈 Giải Nhì','🥉 Giải Ba'];
+  let txt=`DỰ ĐOÁN TRUNG THU 2026 — TỔNG THỰC TẾ: ${actualTotal} người\n`;
+  txt+=`Xếp theo |dự đoán - thực tế|, trùng số gửi sớm thắng — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}\n`;
+  txt+=`----------------------------------------\n`;
+  if(!top3.length) return txt+`Chưa có dự đoán\n`;
+  top3.forEach((x,i)=>{
+    const ten=(x.ho_ten||x.ten||'—').trim();
+    const thon=(x.thon||'').trim()||'—';
+    const sdt=x.sdt||'—';
+    const tg=toVN(x.created_at)||x.created_at;
+    txt+=`${prizes[i]}: ${ten} — ${thon} — SĐT: ${sdt} — Dự đoán: ${x._pred} — Chênh lệch: ${x._diff} — Thời gian: ${tg}\n`;
+  });
+  if(top3.length<3) txt+=`(${3-top3.length} giải còn trống)\n`;
+  return txt;
+}
+async function previewTop3(){
+  const clog=document.getElementById('top3Log'); const csvLog=document.getElementById('csvLog');
+  if(clog) clog.style.display='block';
+  const res=await getTop3Data(); if(!res) return;
+  const {actualTotal, top3}=res;
+  const txt=formatTop3Text(top3, actualTotal) + `\nJSON:\n` + JSON.stringify(top3.map(x=>({ho_ten:(x.ho_ten||x.ten||'').trim(),thon:(x.thon||'').trim(),sdt:x.sdt,du_doan:x._pred,chenh_lech:x._diff,created_at:toVNISO(x.created_at),created_at_vn:toVN(x.created_at)})),null,2);
+  if(clog) clog.textContent=txt;
+  if(csvLog) csvLog.textContent+=`\n👁️ Đã xem Top 3 (${top3.length}/3)\n`;
+}
+async function copyTop3(){
+  const res=await getTop3Data(); if(!res) return;
+  const {actualTotal, top3}=res;
+  const txt=formatTop3Text(top3, actualTotal);
+  try{ await navigator.clipboard.writeText(txt); }catch(e){
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  const clog=document.getElementById('top3Log'); if(clog){ clog.style.display='block'; clog.textContent=txt+`\n\n✅ Đã copy vào clipboard!`; }
+  const csvLog=document.getElementById('csvLog'); if(csvLog) csvLog.textContent+=`📋 Đã copy Top 3\n`;
+  log(`🏆 Đã copy Top 3 (thực tế ${actualTotal}): ${top3.map(x=>x._pred).join(', ')}`);
+  alert('Đã copy Top 3 vào clipboard!');
 }
 function log(m){const el=document.getElementById('log');el.style.display='block';el.textContent+=m+"\n"}
 function openResetDeviceModal(){ document.getElementById('resetPw').value=''; document.getElementById('resetPw').classList.remove('err'); document.getElementById('resetModal').classList.add('open'); setTimeout(()=>document.getElementById('resetPw').focus(),100); }
