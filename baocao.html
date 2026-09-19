@@ -44,6 +44,12 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:800" onclick="showHackDetailPopup()">🚨 IP hack chi tiết (SĐT, họ tên, linh vật)</button>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="showSdtValidPopup()">📱 SĐT hợp lệ (không trùng) — chi tiết</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-weight:800" onclick="exportReportHtml()">📄 Xuất báo cáo hội thi (report.html)</button>
+    </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <label style="font-size:12px;display:flex;align-items:center;gap:6px">Ngưỡng IP <input id="ipThresh" type="number" value="5" min="2" max="20" style="width:60px"> phiếu</label>
       <span id="stat" style="font-size:11px;color:#64748b"></span>
@@ -120,6 +126,30 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
       <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#16a34a;color:#fff" onclick="exportHackDetailExcel()">📊 Excel</button>
       <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#2563eb;color:#fff" onclick="exportHackDetailHtml()">🌐 HTML</button>
       <button class="reset-modal-btn confirm" style="background:#dc2626" onclick="exportHackDetailJSON()">📥 JSON</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup SĐT hợp lệ không trùng -->
+<div class="reset-overlay" id="sdtValidOverlay" onclick="if(event.target===this) closeSdtValidPopup()">
+  <div class="reset-modal" style="max-width:900px;width:98%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="reset-modal-head" style="flex-shrink:0">
+      <div class="reset-modal-icon" style="background:linear-gradient(135deg,#dcfce7,#86efac)">📱</div>
+      <div class="reset-modal-title">SĐT hợp lệ (không trùng) — chi tiết</div>
+      <div class="reset-modal-sub" id="sdtValidSub">Mỗi SĐT 1 dòng • họ tên, thôn, linh vật đã bình chọn, thời gian VN</div>
+    </div>
+    <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0">
+      <input id="sdtValidSearch" placeholder="Lọc SĐT / tên / thôn / STT" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px" oninput="filterSdtValid()">
+      <span id="sdtValidFilterInfo" style="font-size:11px;color:#166534"></span>
+      <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="clearSdtValidFilter()">✕ Xóa</button>
+    </div>
+    <div class="reset-modal-body" id="sdtValidBody" style="flex:1;overflow:auto;max-height:62vh;padding:0 12px 12px"></div>
+    <div class="reset-modal-actions" style="flex-shrink:0;flex-wrap:wrap">
+      <button class="reset-modal-btn cancel" onclick="closeSdtValidPopup()">Đóng</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px" onclick="copySdtValid()">📋 Copy</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#16a34a;color:#fff" onclick="exportSdtValidExcel()">📊 Excel</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#2563eb;color:#fff" onclick="exportSdtValidHtml()">🌐 HTML</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#0e7490;color:#fff" onclick="exportSdtValidJSON()">📥 JSON</button>
     </div>
   </div>
 </div>
@@ -422,6 +452,206 @@ function exportHackDetailHtml(){
   html+=`</tbody></table></body></html>`;
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`hack_detail_${new Date().toISOString().slice(0,10)}.html`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+let sdtValidCache=null;
+function showSdtValidPopup(){
+  if(!lastValid || !lastValid.length){ alert('Chưa có dữ liệu hợp lệ — bấm “Phân tích — hiện 27 đơn vị” trước'); return; }
+  const map=new Map();
+  lastValid.forEach(r=>{
+    const sdt=String(r.sdt||'').trim();
+    if(!sdt) return;
+    if(!map.has(sdt)) map.set(sdt,r);
+    else {
+      const cur=map.get(sdt);
+      try{ if(parseSupabaseTime(r.created_at) < parseSupabaseTime(cur.created_at)) map.set(sdt,r); }catch(e){}
+    }
+  });
+  const rows=[...map.values()].sort((a,b)=> parseSupabaseTime(a.created_at)-parseSupabaseTime(b.created_at));
+  sdtValidCache=rows;
+  let html=`<div style="margin-bottom:8px;padding:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534">Tổng <b>${rows.length}</b> SĐT hợp lệ không trùng (từ ${lastValid.length} phiếu hợp lệ) — mỗi SĐT 1 dòng • bấm lọc để tìm</div>`;
+  html+=`<div style="max-height:58vh;overflow:auto;border:1px solid #bbf7d0;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:760px"><thead><tr style="background:#166534;color:#fff;position:sticky;top:0"><th style="padding:6px 8px">#</th><th style="padding:6px 8px;text-align:left">SĐT</th><th style="padding:6px 8px;text-align:left">Họ tên</th><th style="padding:6px 8px;text-align:left">Thôn</th><th style="padding:6px 8px;text-align:left">STT / Linh vật — Đơn vị</th><th style="padding:6px 8px;text-align:left">Thời gian VN</th><th style="padding:6px 8px;text-align:left">Device / IP</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    const m=MMap[r.stt];
+    const linh=m?m.name:'?'; const dv=m?m.unit:'';
+    html+=`<tr style="border-top:1px solid #e5f5e0"><td style="padding:6px 8px;text-align:center">${i+1}</td><td style="padding:6px 8px;font-family:monospace;font-weight:700">${r.sdt}</td><td style="padding:6px 8px">${(r.ho_ten||r.ten||'—').substring(0,22)}</td><td style="padding:6px 8px">${(r.thon||'—').substring(0,20)}</td><td style="padding:6px 8px">STT ${r.stt} — ${linh.substring(0,24)}<br><span style="color:#57534e;font-size:10px">${dv}</span></td><td style="padding:6px 8px;white-space:nowrap">${toVN(r.created_at)||''}</td><td style="padding:6px 8px;font-family:monospace;font-size:10px">${r.device_id.substring(0,8)}…<br>${r.voter_ip||'null'}</td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('sdtValidBody').innerHTML=html;
+  document.getElementById('sdtValidSub').textContent=`${rows.length} SĐT hợp lệ • ${lastValid.length} phiếu → dedup theo SĐT`;
+  document.getElementById('sdtValidOverlay').classList.add('open');
+  setTimeout(filterSdtValid,50);
+}
+function closeSdtValidPopup(){ document.getElementById('sdtValidOverlay').classList.remove('open'); }
+function filterSdtValid(){
+  const q=(document.getElementById('sdtValidSearch')?.value||'').toLowerCase().trim();
+  const rows=document.querySelectorAll('#sdtValidBody tbody tr');
+  let shown=0;
+  rows.forEach(tr=>{ const ok=!q || tr.textContent.toLowerCase().includes(q); tr.style.display=ok?'':'none'; if(ok) shown++; });
+  const info=document.getElementById('sdtValidFilterInfo'); if(info) info.textContent=`Hiển thị ${shown}/${rows.length}`;
+}
+function clearSdtValidFilter(){ const el=document.getElementById('sdtValidSearch'); if(el) el.value=''; filterSdtValid(); }
+function copySdtValid(){
+  if(!sdtValidCache){ alert('Chưa có dữ liệu'); return; }
+  let txt=`SDT HOP LE KHONG TRUNG — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})} — ${sdtValidCache.length} SĐT\n`;
+  sdtValidCache.forEach((r,i)=>{
+    const m=MMap[r.stt]; txt+=`${i+1}. ${r.sdt} — ${(r.ho_ten||r.ten||'').trim()} — ${r.thon||'—'} — STT ${r.stt} ${m?m.name:''} — ${toVN(r.created_at)} — ${r.device_id}\n`;
+  });
+  navigator.clipboard.writeText(txt).then(()=> alert('Đã copy '+sdtValidCache.length+' SĐT')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Đã copy');
+  });
+}
+function exportSdtValidJSON(){
+  if(!sdtValidCache){ alert('Chưa có dữ liệu'); return; }
+  const out={exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total_sdt:sdtValidCache.length, total_phieu_hop_le:(lastValid?lastValid.length:null), data:sdtValidCache.map(r=>({sdt:r.sdt, ho_ten:(r.ho_ten||r.ten||'').trim(), thon:r.thon, stt:r.stt, ten_mo_hinh:MMap[r.stt]?.name||null, don_vi:MMap[r.stt]?.unit||null, voter_ip:r.voter_ip, device_id:r.device_id, created_at:toVNISO(r.created_at), created_at_vn:toVN(r.created_at)}))};
+  downloadJSON(`sdt_hop_le_khong_trung_${new Date().toISOString().slice(0,10)}_${sdtValidCache.length}.json`, out);
+}
+function exportSdtValidExcel(){
+  if(!sdtValidCache || !sdtValidCache.length){ alert('Chưa có dữ liệu — bấm Phân tích trước'); return; }
+  const cols=['#','SĐT','Họ tên','Thôn','STT','Linh vật','Đơn vị','Thời gian VN','Device','IP'];
+  let html='<html><head><meta charset="UTF-8"></head><body><table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Segoe UI;font-size:11px"><thead><tr style="background:#166534;color:#fff">'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+  sdtValidCache.forEach((r,i)=>{
+    const m=MMap[r.stt];
+    html+=`<tr><td>${i+1}</td><td style="mso-number-format:'\\@'">${r.sdt}</td><td>${(r.ho_ten||r.ten||'').replace(/&/g,'&amp;')}</td><td>${(r.thon||'').replace(/&/g,'&amp;')}</td><td>${r.stt}</td><td>${(m?m.name:'').replace(/&/g,'&amp;')}</td><td>${(m?m.unit:'').replace(/&/g,'&amp;')}</td><td>${(toVN(r.created_at)||'').replace(/&/g,'&amp;')}</td><td>${r.device_id}</td><td>${r.voter_ip||''}</td></tr>`;
+  });
+  html+='</tbody></table></body></html>';
+  const blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`sdt_hop_le_${new Date().toISOString().slice(0,10)}_${sdtValidCache.length}.xls`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function exportSdtValidHtml(){
+  if(!sdtValidCache || !sdtValidCache.length){ alert('Chưa có dữ liệu'); return; }
+  let html=`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>SĐT hợp lệ không trùng — Trung thu 2026</title><style>body{font-family:Segoe UI,sans-serif;padding:20px;background:#fffbeb}h1{color:#166534}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#166534;color:#fff;padding:8px}td{padding:6px 8px;border:1px solid #bbf7d0}tr:nth-child(even){background:#f0fdf4}</style></head><body><h1>SĐT hợp lệ không trùng — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</h1><p>Tổng ${sdtValidCache.length} SĐT • từ ${lastValid?lastValid.length:''} phiếu hợp lệ</p><table><thead><tr><th>#</th><th>SĐT</th><th>Họ tên</th><th>Thôn</th><th>STT / Linh vật</th><th>Thời gian VN</th><th>Device / IP</th></tr></thead><tbody>`;
+  sdtValidCache.forEach((r,i)=>{
+    const m=MMap[r.stt];
+    html+=`<tr><td>${i+1}</td><td>${r.sdt}</td><td>${(r.ho_ten||r.ten||'').replace(/&/g,'&amp;')}</td><td>${(r.thon||'').replace(/&/g,'&amp;')}</td><td>STT ${r.stt} ${(m?m.name:'').replace(/&/g,'&amp;')}<br><span style="color:#57534e">${(m?m.unit:'').replace(/&/g,'&amp;')}</span></td><td>${toVN(r.created_at)||''}</td><td>${r.device_id.substring(0,8)}…<br>${r.voter_ip||''}</td></tr>`;
+  });
+  html+=`</tbody></table><p style="font-size:11px;color:#64748b">Xuất từ baocao.html — ${new Date().toISOString()}</p></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`sdt_hop_le_${new Date().toISOString().slice(0,10)}_${sdtValidCache.length}.html`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function exportReportHtml(){
+  if(!lastValid || !lastSuspicious || !lastBc){ alert('Chưa có dữ liệu — bấm “Phân tích — hiện 27 đơn vị” hoặc chọn file JSON trước'); return; }
+  const ipThresh=parseInt(document.getElementById('ipThresh')?.value||'5',10)||5;
+  const totalCur=lastBc.length, totalValid=lastValid.length, totalHack=lastSuspicious.suspicious.length;
+  const hackPct=totalCur? (totalHack/totalCur*100).toFixed(1):'0';
+  const curCounts={}, validCounts={};
+  lastBc.forEach(r=> curCounts[r.stt]=(curCounts[r.stt]||0)+1);
+  lastValid.forEach(r=> validCounts[r.stt]=(validCounts[r.stt]||0)+1);
+  // thôn nhiệt tình: đếm theo thon hợp lệ
+  const thonValid={}, thonTotal={};
+  lastValid.forEach(r=>{ const t=(r.thon||'—').trim()||'—'; thonValid[t]=(thonValid[t]||0)+1; });
+  lastBc.forEach(r=>{ const t=(r.thon||'—').trim()||'—'; thonTotal[t]=(thonTotal[t]||0)+1; });
+  const topThon=[...Object.entries(thonValid)].sort((a,b)=>b[1]-a[1]).slice(0,15);
+  // hack per thôn / per STT
+  const hackPerThon={}, hackPerStt={};
+  lastSuspicious.suspicious.forEach(s=>{ const t=(s.thon||'—'); hackPerThon[t]=(hackPerThon[t]||0)+1; const k=s.stt||'-'; hackPerStt[k]=(hackPerStt[k]||0)+1; });
+  const topHackThon=[...Object.entries(hackPerThon)].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const topHackStt=[...Object.entries(hackPerStt)].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  // phân loại hack: IP vs SĐT
+  let ipHack=0, sdtHack=0;
+  lastSuspicious.suspicious.forEach(s=>{ s.reasons.forEach(r=>{ if(r.includes('IP ')) ipHack++; if(r.includes('SĐT')) sdtHack++; }); });
+  const timeStr=new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'});
+  const timeIso=new Date().toISOString();
+  let html=`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Báo cáo hội thi Trung thu 2026 — Phân tích chi tiết</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:#fffbeb;color:#1c1917;padding:24px;line-height:1.6}
+h1{color:#166534;font-size:22px;text-align:center;margin-bottom:4px}h2{color:#14532d;font-size:16px;margin:24px 0 10px;border-left:4px solid #16a34a;padding-left:10px}
+h3{color:#7f1d1d;font-size:14px;margin:16px 0 8px}
+.card{background:#fff;border:1px solid #fde68a;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi div{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:10px;padding:12px;text-align:center}
+.kpi b{font-size:20px;color:#166534;display:block}.kpi span{font-size:11px;color:#57534e}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}th{background:#166534;color:#fff;padding:7px 8px;text-align:left}td{padding:6px 8px;border:1px solid #e7e5e4}tr:nth-child(even){background:#f8fafc}
+.badge{padding:2px 6px;border-radius:6px;font-size:10px;color:#fff;font-weight:700}.badge-ok{background:#16a34a}.badge-warn{background:#f59e0b}.badge-danger{background:#dc2626}
+.tip{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;font-size:11px;color:#92400e;margin-top:8px}
+.small{font-size:11px;color:#78716c}
+@media print{body{padding:0;background:#fff}.card{box-shadow:none;break-inside:avoid}}
+</style></head><body>
+<h1>📊 BÁO CÁO HỘI THI TRUNG THU 2026 — PHÂN TÍCH CHI TIẾT</h1>
+<p style="text-align:center;font-size:12px;color:#57534e">Xuất từ <b>baocao.html</b> • ${timeStr} (Asia/Ho_Chi_Minh) • ${timeIso} • Ngưỡng IP≥${ipThresh}</p>
+
+<div class="card"><h2>1. Tổng quan</h2>
+<div class="kpi">
+<div><b>${totalCur}</b><span>Tổng phiếu (chưa lọc)</span></div>
+<div><b>${totalValid}</b><span>Hợp lệ</span></div>
+<div><b>${totalHack}</b><span>Hack bị loại • ${hackPct}%</span></div>
+<div><b>${Object.keys(thonValid).length}</b><span>Thôn/đơn vị có phiếu hợp lệ</span></div>
+</div>
+<p class="small">Dữ liệu: <code>binh_chon_khan_gia</code> + <code>du_doan</code> (Supabase pagination 1000). Lọc hack: IP≥${ipThresh} (WARN, ≥10 CRITICAL) + SĐT trùng ≥2 device (CRITICAL). Sau lọc mới ghi Supabase.</p>
+</div>
+
+<div class="card"><h2>2. Kết quả 27 linh vật — Hiện tại vs Hợp lệ</h2>
+<table><thead><tr><th>STT</th><th>Linh vật</th><th>Đơn vị</th><th>Hiện tại</th><th>Hợp lệ ↓</th><th>Bị xóa</th><th>Tỉ lệ hack</th></tr></thead><tbody>`;
+  [...MODELS].sort((a,b)=> (validCounts[b.stt]||0)-(validCounts[a.stt]||0) || a.stt-b.stt).forEach(m=>{
+    const cur=curCounts[m.stt]||0, val=validCounts[m.stt]||0, del=cur-val;
+    const pct=cur? (del/cur*100).toFixed(1):'0';
+    const cls=del/cur>0.5?'badge-danger':del/cur>0.2?'badge-warn':'badge-ok';
+    html+=`<tr><td style="text-align:center">${m.stt}</td><td><b>${m.name}</b></td><td>${m.unit}</td><td style="text-align:center">${cur}</td><td style="text-align:center;font-weight:800;color:#166534">${val}</td><td style="text-align:center;color:${del?'#dc2626':'#64748b'}">${del?'-'+del:'0'}</td><td style="text-align:center"><span class="badge ${cls}">${pct}%</span></td></tr>`;
+  });
+  html+=`</tbody></table>
+<div class="tip"><b>Đọc nhanh:</b> Tỉ lệ hack cao tập trung ở STT có <span class="badge badge-danger">>50%</span> (thường là IP chùm bơm phiếu). Ví dụ STT 8/6/3/26 thường nổi trong file 12k phiếu trước lọc.</div>
+</div>
+
+<div class="card"><h2>3. Thôn / đơn vị tham gia nhiệt tình nhất (hợp lệ)</h2>
+<table><thead><tr><th>#</th><th>Thôn / Đơn vị</th><th>Hợp lệ</th><th>Tổng (chưa lọc)</th><th>Tỉ lệ giữ lại</th></tr></thead><tbody>`;
+  topThon.forEach(([thon,val],i)=>{
+    const tot=thonTotal[thon]||val;
+    const keep=tot? (val/tot*100).toFixed(1):'100';
+    html+=`<tr><td style="text-align:center">${i+1}</td><td><b>${thon.replace(/&/g,'&amp;')}</b></td><td style="text-align:center;font-weight:700">${val}</td><td style="text-align:center">${tot}</td><td style="text-align:center">${keep}%</td></tr>`;
+  });
+  html+=`</tbody></table>
+<p class="small">Xếp theo số phiếu <b>hợp lệ</b> (đã loại hack). Thôn đứng đầu là đơn vị huy động khán giả tốt nhất, không tính phiếu ảo.</p>
+</div>
+
+<div class="card"><h2>4. Phân tích hack — cách thức tấn công</h2>
+<div class="kpi">
+<div><b>${ipHack}</b><span>Lượt đánh dấu IP chùm</span></div>
+<div><b>${sdtHack}</b><span>Lượt đánh dấu SĐT trùng</span></div>
+<div><b>${topHackThon.length?topHackThon[0][1]:0}</b><span>Max hack 1 thôn (${topHackThon.length?topHackThon[0][0]:'—'})</span></div>
+<div><b>${topHackStt.length?topHackStt[0][0]:'—'}</b><span>STT bị bơm nhiều nhất (${topHackStt.length?topHackStt[0][1]:0} phiếu)</span></div>
+</div>
+<h3>4.1. Phương thức chính</h3>
+<ul style="font-size:12px;margin-left:18px">
+<li><b>IP chùm (chiếm đa số):</b> 1 IP tạo ${ipThresh}–hàng trăm phiếu trong thời gian ngắn. Mã hoá: <code>IP 171.x.x.x có 80 phiếu (STT 8)</code>. Dấu hiệu: cùng <code>voter_ip</code>, khác <code>device_id</code> (giả lập/chia sẻ link ảo), burst 5 phiếu/5 phút hoặc 10 phiếu/60s.</li>
+<li><b>SĐT trùng nhiều device:</b> 1 SĐT đăng trên ≥2 <code>device_id</code> khác nhau → <span class="badge badge-danger">CRITICAL</span>. Thường đi kèm IP chùm, dùng để vượt qua giới hạn “1 SĐT 1 phiếu”.</li>
+<li><b>UA rỗng / trùng chùm (phát hiện ở hack.html):</b> 15+ phiếu cùng UA hoặc UA trống → bot/headless.</li>
+<li><b>Burst hệ thống:</b> 10+ phiếu/60s toàn hệ thống → nghi tool auto-click.</li>
+<li><b>Tập trung STT:</b> 1 STT chiếm >50% tổng (ví dụ STT 8 chiếm 77%) → bơm phiếu có chủ đích.</li>
+</ul>
+<h3>4.2. Top thôn / STT bị hack</h3>
+<table><thead><tr><th>Thôn hack nhiều</th><th>Số phiếu</th><th>STT hack nhiều</th><th>Số phiếu</th></tr></thead><tbody>`;
+  const maxRows=Math.max(topHackThon.length, topHackStt.length);
+  for(let i=0;i<maxRows;i++){
+    const t=topHackThon[i]||['—','']; const s=topHackStt[i]||['—',''];
+    const m=s[0]!='—'?MMap[s[0]]:null;
+    html+=`<tr><td>${t[0]}</td><td style="text-align:center">${t[1]||''}</td><td>STT ${s[0]} ${m?m.name.substring(0,22):''}</td><td style="text-align:center">${s[1]||''}</td></tr>`;
+  }
+  html+=`</tbody></table>
+<div class="tip"><b>Ví dụ bằng chứng trong popup “IP hack chi tiết”:</b> mỗi IP liệt kê thôn, STT buff, SĐT, họ tên, thời gian <code>first → last</code> và lý do. Dùng để đối chiếu NAT chung (nhiều người chung WiFi) tránh oan.</div>
+</div>
+
+<div class="card"><h2>5. Giải pháp phòng chống</h2>
+<h3>Đã áp dụng</h3>
+<ul style="font-size:12px;margin-left:18px">
+<li><b>Lọc & xóa vĩnh viễn:</b> <code>DELETE … WHERE device_id IN (...)</code> chia batch 100, đồng thời xóa <code>du_doan</code> liên quan.</li>
+<li><b>Cấm IP:</b> ghi <code>localStorage banned_ips</code> + bảng <code>banned_ips(ip PK)</code> (RLS anon insert/select). <code>khan-gia / index</code> check <code>isIpBanned()</code> trước khi <code>POST</code> → chặn client.</li>
+<li><b>Ngưỡng động:</b> cho phép chỉnh <code>ipThresh</code> (2–20) để rà soát.</li>
+</ul>
+<h3>Đề xuất tăng cường</h3>
+<ul style="font-size:12px;margin-left:18px">
+<li><b>1 phiếu / 1 SĐT (unique constraint) + OTP:</b> tạo <code>UNIQUE(sdt)</code> ở DB, hoặc gửi OTP SMS để chặn SĐT ảo/trùng.</li>
+<li><b>Rate limit server:</b> Edge Function / RLS: 1 IP ≤3 phiếu/giờ, chặn burst 5/5 phút, trả 429.</li>
+<li><b>Captcha / Turnstile:</b> trước khi <code>confirmVote()</code> bắt buộc giải captcha, chặn bot.</li>
+<li><b>Device fingerprint:</b> lưu <code>fingerprint + user_agent</code>, chặn UA rỗng/trùng &gt;15.</li>
+<li><b>Giám sát realtime:</b> dashboard cảnh báo khi 1 STT tăng &gt;50 phiếu/10 phút hoặc 1 IP vượt ngưỡng.</li>
+<li><b>Kiểm tra thôn:</b> chéo SĐT vs danh sách hộ khẩu thôn, yêu cầu ảnh minh chứng khi SĐT ngoại thôn.</li>
+<li><b>Lưu vết:</b> giữ <code>suspicious_IP*_*.json</code> làm bằng chứng, công khai báo cáo ngắn gọn thôn để răn đe.</li>
+</ul>
+<p class="small">Khuyến nghị: sau khi xóa hack, khóa bình chọn (<code>voting_closed</code>) và chỉ dùng phiếu hợp lệ để tính giải.</p>
+</div>
+
+<p style="text-align:center;font-size:11px;color:#78716c;margin-top:16px">Báo cáo được sinh tự động từ <b>baocao.html</b> • ${timeIso} • Không chỉnh tay số liệu. In (Ctrl+P) để lưu PDF.</p>
+</body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`report_${new Date().toISOString().slice(0,10)}.html`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
 }
 async function analyzeFile(input){
   const file=input.files?.[0]; if(!file) return;
