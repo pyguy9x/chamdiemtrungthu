@@ -42,7 +42,7 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
   <div class="head"><h1>🔍 Phát hiện Hack Bình chọn</h1><p>IP ≥5, SĐT trùng, UA chùm, burst — 27 linh vật</p></div>
   <div class="body" style="text-align:left">
     <div style="margin-bottom:10px;text-align:center">
-      <input id="pw" type="password" placeholder="Nhập mã TT2026" style="max-width:220px">
+      <input id="pw" type="password" style="max-width:220px">
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:800" onclick="analyzeHackLive()">🔍 Phân tích live từ Supabase</button>
@@ -65,6 +65,9 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-weight:800" onclick="showThonHackReport()">📄 Báo cáo ngắn gọn thôn (gửi Zalo)</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="showValidVotesPopup()">✅ Bình chọn hợp lệ — 200 mới nhất (IP, thôn, linh vật)</button>
     </div>
     <p style="font-size:11px;color:#a8a29e;margin-top:8px">Hiển thị 200/<span id="hackTotal">0</span> • Tick để chọn xóa hàng loạt ở dưới (dùng với Nút Reset đã chọn). CRITICAL: SĐT trùng / IP≥10. WARN: IP≥5 / UA / burst.</p>
   </div>
@@ -115,6 +118,27 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
       <button class="reset-modal-btn confirm" style="background:#dc2626" onclick="banSelectedIps()">🚫 Cấm IP đã chọn</button>
     </div>
     <div style="padding:0 20px 12px;font-size:11px;color:#78716c;text-align:center">Cấm = thêm IP vào <code>localStorage banned_ips</code> + ghi Supabase <code>banned_ips</code> (nếu có bảng) — vote sau sẽ bị chặn ở client. Gửi cảnh báo = copy tin nhắn mẫu. Lọc để chọn nhanh.</div>
+  </div>
+</div>
+<!-- Popup bình chọn hợp lệ -->
+<div class="reset-overlay" id="validVotesOverlay" onclick="if(event.target===this) closeValidVotesPopup()">
+  <div class="reset-modal" style="max-width:780px;width:96%;max-height:86vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="reset-modal-head" style="flex-shrink:0">
+      <div class="reset-modal-icon" style="background:linear-gradient(135deg,#dcfce7,#86efac)">✅</div>
+      <div class="reset-modal-title">Bình chọn hợp lệ — 200 mới nhất</div>
+      <div class="reset-modal-sub" id="validVotesSub">Loại trừ hack • IP, thôn, linh vật</div>
+    </div>
+    <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0">
+      <input id="validVotesSearch" placeholder="Lọc IP / thôn / STT / tên" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px" oninput="filterValidVotes()">
+      <span id="validVotesFilterInfo" style="font-size:11px;color:#166534"></span>
+      <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="clearValidVotesFilter()">✕ Xóa lọc</button>
+    </div>
+    <div class="reset-modal-body" id="validVotesBody" style="flex:1;overflow:auto;max-height:60vh;padding:0 12px 12px"></div>
+    <div class="reset-modal-actions" style="flex-shrink:0">
+      <button class="reset-modal-btn cancel" onclick="closeValidVotesPopup()">Đóng</button>
+      <button class="reset-modal-btn confirm" style="background:#16a34a" onclick="copyValidVotes()">📋 Copy</button>
+      <button class="reset-modal-btn confirm" style="background:#0e7490" onclick="exportValidVotesJSON()">📥 Export JSON</button>
+    </div>
   </div>
 </div>
 <!-- Popup báo cáo ngắn gọn thôn -->
@@ -536,6 +560,69 @@ function copyThonHackReport(){
   navigator.clipboard.writeText(thonHackReportText).then(()=> alert('Đã copy báo cáo ngắn gọn thôn — dán vào Zalo')).catch(()=>{
     const ta=document.createElement('textarea'); ta.value=thonHackReportText; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Đã copy');
   });
+}
+let validVotesCache=null;
+async function showValidVotesPopup(){
+  const pw=document.getElementById('pw').value.trim();
+  if(!pw){ alert('Nhập mã TT2026 ở ô trên'); document.getElementById('pw').focus(); return; }
+  const clog=document.getElementById('hackLog');
+  if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang tải bình chọn hợp lệ...\n'; }
+  const data=await fetchAllAudience(); if(!data) return;
+  const ipThresh=parseInt(document.getElementById('hackIpThresh')?.value||'5',10)||5;
+  const res=analyzeHackData(data.bc, data.du, ipThresh);
+  suspiciousGlobal=res; suspiciousGlobal._bc=data.bc; suspiciousGlobal._du=data.du;
+  document.getElementById('hackTotal').textContent=res.suspicious.length;
+  const suspiciousIds=new Set(res.suspicious.map(s=>s.device_id));
+  const valid=data.bc.filter(r=> !suspiciousIds.has(r.device_id)).sort((a,b)=> parseSupabaseTime(b.created_at)-parseSupabaseTime(a.created_at)).slice(0,200);
+  validVotesCache=valid;
+  let html=`<div style="margin-bottom:8px;padding:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#166534">Hiển thị ${valid.length} / ${data.bc.length - res.suspicious.filter(s=> data.bc.some(b=>b.device_id===s.device_id)).length} hợp lệ (đã loại ${res.suspicious.length} nghi ngờ) • 200 mới nhất</div>`;
+  html+=`<div style="max-height:52vh;overflow:auto;border:1px solid #bbf7d0;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:640px"><thead><tr style="background:#166534;color:#fff;position:sticky;top:0"><th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">IP</th><th style="padding:6px 8px;text-align:left">Thôn</th><th style="padding:6px 8px;text-align:left">STT / Linh vật</th><th style="padding:6px 8px;text-align:left">Thời gian VN</th><th style="padding:6px 8px;text-align:left">SĐT / Họ tên</th></tr></thead><tbody>`;
+  valid.forEach((r,i)=>{
+    const m=MMap[r.stt];
+    const ten=m?m.name:'?';
+    const thon=r.thon||'—';
+    const sdtMask=r.sdt? String(r.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+    const tg=toVN(r.created_at)||r.created_at;
+    html+=`<tr style="border-top:1px solid #e5f5e0"><td style="padding:6px 8px;text-align:center">${i+1}</td><td style="padding:6px 8px;font-family:monospace">${r.voter_ip||'null'}</td><td style="padding:6px 8px">${thon.substring(0,18)}</td><td style="padding:6px 8px">STT ${r.stt}<br><span style="color:#57534e">${ten.substring(0,22)}</span></td><td style="padding:6px 8px;white-space:nowrap">${tg}</td><td style="padding:6px 8px"><b>${sdtMask}</b><br><span style="color:#475569">${(r.ho_ten||r.ten||'').substring(0,18)}</span></td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('validVotesBody').innerHTML=html;
+  document.getElementById('validVotesSub').textContent=`${valid.length} hợp lệ / ${data.bc.length} tổng • ${res.suspicious.length} nghi ngờ đã loại • 200 mới nhất`;
+  document.getElementById('validVotesOverlay').classList.add('open');
+  if(clog) clog.textContent+=`✅ Đã lọc ${valid.length} hợp lệ (200 mới nhất)\n`;
+}
+function closeValidVotesPopup(){ document.getElementById('validVotesOverlay').classList.remove('open'); }
+function filterValidVotes(){
+  const q=(document.getElementById('validVotesSearch')?.value||'').toLowerCase().trim();
+  const rows=document.querySelectorAll('#validVotesBody tbody tr');
+  let shown=0;
+  rows.forEach(tr=>{
+    const txt=tr.textContent.toLowerCase();
+    const ok=!q || txt.includes(q);
+    tr.style.display=ok?'':'none';
+    if(ok) shown++;
+  });
+  const info=document.getElementById('validVotesFilterInfo');
+  if(info) info.textContent=`Hiển thị ${shown}/${rows.length}`;
+}
+function clearValidVotesFilter(){ const el=document.getElementById('validVotesSearch'); if(el) el.value=''; filterValidVotes(); }
+function copyValidVotes(){
+  if(!validVotesCache || !validVotesCache.length){ alert('Chưa có dữ liệu — bấm Phân tích trước'); return; }
+  let txt=`BÌNH CHỌN HỢP LỆ — 200 MỚI NHẤT — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}\n`;
+  txt+=`Tổng hợp lệ: ${validVotesCache.length} / 200 mới nhất\n`;
+  txt+=`------------------------------------------------\n`;
+  validVotesCache.forEach((r,i)=>{
+    const m=MMap[r.stt];
+    txt+=`${i+1}. IP ${r.voter_ip||'null'} — ${r.thon||'—'} — STT ${r.stt} ${m?m.name:''} — ${toVN(r.created_at)} — ${r.sdt||'—'} ${(r.ho_ten||r.ten||'').trim()}\n`;
+  });
+  navigator.clipboard.writeText(txt).then(()=> alert('Đã copy 200 hợp lệ')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Đã copy');
+  });
+}
+function exportValidVotesJSON(){
+  if(!validVotesCache || !validVotesCache.length){ alert('Chưa có dữ liệu — bấm Phân tích trước'); return; }
+  const out={exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total_valid:validVotesCache.length, data:validVotesCache.map(r=>({stt:r.stt, ten_mo_hinh:MMap[r.stt]?.name||null, don_vi:MMap[r.stt]?.unit||null, thon:r.thon, sdt:r.sdt, ho_ten:(r.ho_ten||r.ten||'').trim(), voter_ip:r.voter_ip, created_at:toVNISO(r.created_at), created_at_vn:toVN(r.created_at), created_at_utc:r.created_at, device_id:r.device_id}))};
+  downloadJSON(`valid_votes_200_${new Date().toISOString().slice(0,10)}.json`, out);
 }
 async function loadDevices(){
   const pw=document.getElementById('pw').value.trim();
