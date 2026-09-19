@@ -424,9 +424,8 @@ async function submitAudienceInfo(){
 function buildAudienceTabs(active){
   const bar=document.getElementById('tabBar');
   const eActive=active==='entry'?'active':'';
-  const vActive=active==='vote'?'active':'';
   const dActive=active==='dudoan'?'active':'';
-  bar.innerHTML=`<button class="tab-btn ${eActive}" onclick="showAudienceEntryTab()" style="background:${eActive?'#6366f1':'#fff'};color:${eActive?'#fff':'#6366f1'};border:1px solid #c7d2fe">📝 Thông tin</button><button class="tab-btn ${vActive}" onclick="showAudienceVote()" style="background:${vActive?'linear-gradient(135deg,#4db6ac,#00897b)':'#e0f2f1'};color:${vActive?'#fff':'#00695c'};border:1px solid #b2dfdb">🗳️ Bình chọn</button><button class="tab-btn ${dActive}" onclick="showAudienceDuDoan()" style="background:${dActive?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${dActive?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
+  bar.innerHTML=`<button class="tab-btn ${eActive}" onclick="showAudienceEntryTab()" style="background:${eActive?'#6366f1':'#fff'};color:${eActive?'#fff':'#6366f1'};border:1px solid #c7d2fe">📝 Thông tin</button><button class="tab-btn ${dActive}" onclick="showAudienceDuDoan()" style="background:${dActive?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${dActive?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
 }
 function showAudienceEntryTab(){
   document.getElementById('audienceEntry').style.display='';
@@ -546,7 +545,7 @@ function buildTabs(){
     }
   });
   h+=`<button class="tab-btn ${isSummary?'active':''}" onclick="showSummary(this)" style="background:${isSummary?'#ff6f00':'#fff3e0'};color:${isSummary?'#fff':'#e65100'};border:1px solid #ffcc80">📊 Tổng hợp</button>`;
-  h+=`<button class="tab-btn ${isVote?'active':''}" onclick="showVote()" style="background:${isVote?'linear-gradient(135deg,#4db6ac,#00897b)':'#e0f2f1'};color:${isVote?'#fff':'#00695c'};border:1px solid #b2dfdb">🗳️ Bình chọn</button>`;
+  // tab Bình chọn đã ẩn theo yêu cầu
   h+=`<button class="tab-btn ${isDuDoan?'active':''}" onclick="showDuDoan()" style="background:${isDuDoan?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${isDuDoan?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
   bar.innerHTML=h;
   refreshOtherTotals();
