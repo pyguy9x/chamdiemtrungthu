@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kết quả Phiếu Hợp lệ — Trung thu 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#fffbeb;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:16px;gap:16px}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(127,29,29,.12);max-width:780px;width:100%;overflow:hidden;border:1px solid #fde68a}
+.head{padding:20px;background:linear-gradient(135deg,#166534,#16a34a);color:#fff;text-align:center}
+.head h1{font-size:18px}
+.head p{font-size:12px;opacity:.9}
+.body{padding:20px}
+.btn{padding:10px 14px;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer}
+.btn-ghost{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.btn-danger{background:#dc2626;color:#fff}
+.log{margin-top:12px;font-size:12px;color:#57534e;white-space:pre-wrap;text-align:left;background:#fffbeb;padding:10px;border-radius:8px;max-height:240px;overflow:auto;display:none}
+.reset-overlay{position:fixed;inset:0;background:rgba(20,30,10,.45);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.reset-overlay.open{display:flex}
+.reset-modal{background:#fff;border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.2);max-width:360px;width:100%;overflow:hidden;animation:pop .2s ease}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.reset-modal-head{padding:18px 20px 0;text-align:center}
+.reset-modal-icon{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,#dcfce7,#86efac);display:flex;align-items:center;justify-content:center;font-size:26px}
+.reset-modal-title{font-weight:800;color:#166534;font-size:16px}
+.reset-modal-sub{font-size:13px;color:#78716c;margin-top:4px}
+.reset-modal-body{padding:14px 20px}
+.reset-modal-actions{display:flex;gap:10px;padding:0 20px 20px}
+.reset-modal-btn{flex:1;padding:11px;border-radius:10px;font-weight:700;border:none;cursor:pointer}
+.reset-modal-btn.cancel{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.reset-modal-btn.confirm{background:#16a34a;color:#fff}
+input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;border-radius:8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head"><h1>📊 Kết quả Phiếu Hợp lệ — 27 linh vật</h1><p>Phân tích hack → 27 đơn vị hiện tại vs hợp lệ → ghi Supabase → chi tiết IP/SĐT</p></div>
+  <div class="body" style="text-align:left">
+    <div style="margin-bottom:10px;text-align:center">
+      <input id="pw" type="password" style="max-width:220px" placeholder="Mã TT2026">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="analyzeAndShowConfirm()">🔍 Phân tích — hiện 27 đơn vị</button>
+      <label class="btn btn-ghost" style="flex:1;min-width:160px;cursor:pointer;text-align:center">📂 Chọn file JSON<input type="file" id="fileInput" accept=".json" style="display:none" onchange="analyzeFile(this)"></label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <label style="font-size:12px;display:flex;align-items:center;gap:6px">Ngưỡng IP <input id="ipThresh" type="number" value="5" min="2" max="20" style="width:60px"> phiếu</label>
+      <span id="stat" style="font-size:11px;color:#64748b"></span>
+    </div>
+    <div class="log" id="log" style="display:none"></div>
+    <div id="mainTableWrap" style="margin-top:8px"></div>
+    <p style="font-size:11px;color:#a8a29e;margin-top:8px">Bấm <b>Phân tích</b> → popup 27 đơn vị (Tổng hiện tại vs Hợp lệ) → <b>Xác nhận</b> mới ghi Supabase. Sau khi lưu sẽ hiện chi tiết phiếu hợp lệ (IP, SĐT, thôn, linh vật).</p>
+  </div>
+</div>
+
+<!-- Popup xác nhận 27 đơn vị -->
+<div class="reset-overlay" id="confirmOverlay" onclick="if(event.target===this) closeConfirm()">
+  <div class="reset-modal" style="max-width:800px;width:98%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="reset-modal-head" style="flex-shrink:0">
+      <div class="reset-modal-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a)">🔄</div>
+      <div class="reset-modal-title">Xác nhận cập nhật phiếu hợp lệ</div>
+      <div class="reset-modal-sub" id="confirmSub">27 đơn vị — Tổng hiện tại vs Hợp lệ (đã loại hack IP≥5)</div>
+    </div>
+    <div class="reset-modal-body" id="confirmBody" style="flex:1;overflow:auto;max-height:62vh;padding:0 12px 12px"></div>
+    <div class="reset-modal-actions" style="flex-shrink:0">
+      <button class="reset-modal-btn cancel" onclick="closeConfirm()">Hủy</button>
+      <button class="reset-modal-btn confirm" style="background:#16a34a" onclick="confirmUpdate()">✅ Xác nhận ghi vào Supabase</button>
+    </div>
+    <div style="padding:0 20px 12px;font-size:11px;color:#78716c;text-align:center">Ghi = xóa <span id="confirmDelCount">0</span> phiếu hack vĩnh viễn (chia batch 100). Hủy thì không ghi.</div>
+  </div>
+</div>
+
+<!-- Popup chi tiết phiếu hợp lệ -->
+<div class="reset-overlay" id="detailOverlay" onclick="if(event.target===this) closeDetail()">
+  <div class="reset-modal" style="max-width:860px;width:98%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="reset-modal-head" style="flex-shrink:0">
+      <div class="reset-modal-icon" style="background:linear-gradient(135deg,#dbeafe,#93c5fd)">📋</div>
+      <div class="reset-modal-title">Phiếu hợp lệ chi tiết</div>
+      <div class="reset-modal-sub" id="detailSub">IP, SĐT, thôn, linh vật — 200 mới nhất</div>
+    </div>
+    <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f0fdf4;border-bottom:1px solid #bbf7d0;flex-shrink:0">
+      <input id="detailSearch" placeholder="Lọc IP / thôn / STT / tên" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px" oninput="filterDetail()">
+      <span id="detailFilterInfo" style="font-size:11px;color:#166534"></span>
+      <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="clearDetailFilter()">✕ Xóa</button>
+    </div>
+    <div class="reset-modal-body" id="detailBody" style="flex:1;overflow:auto;max-height:62vh;padding:0 12px 12px"></div>
+    <div class="reset-modal-actions" style="flex-shrink:0">
+      <button class="reset-modal-btn cancel" onclick="closeDetail()">Đóng</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:120px;font-size:12px" onclick="copyDetail()">📋 Copy</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:120px;font-size:12px;background:#0e7490;color:#fff" onclick="exportDetailJSON()">📥 Export JSON</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
+const MODELS=[{stt:1,name:"Hào khí rồng vàng",unit:"Thôn Mậu Đông 1"},{stt:2,name:"Đại sứ bạch thỏ",unit:"Thôn Mậu A 5"},{stt:3,name:"Ngôi sao An Thịnh 1 - vui trung thu gắn kết cộng đồng",unit:"Thôn An Thịnh 1"},{stt:4,name:"Ánh trăng rằm bản em",unit:"Trường Mầm non Sơn Ca"},{stt:5,name:"Ký ức quê hương",unit:"Thôn Yên Thái 2"},{stt:6,name:"Tết trung thu - trăng sáng trên thác khe cam",unit:"Tiểu học Mậu A 1"},{stt:7,name:"Trung thu vùng cao - giữ gìn bản sắc - thắp sáng ước mơ",unit:"Thôn Ngòi A 3"},{stt:8,name:"Ánh trăng miền Quế",unit:"Trường Mầm Non Mậu A 1"},{stt:9,name:"Cá Chép",unit:"Thôn Ngòi A 1"},{stt:10,name:"Vầng trăng khuyết",unit:"Trường THPH Lương Bằng"},{stt:11,name:"Đèn Kéo Quân",unit:"Thôn Mậu A 6"},{stt:12,name:"Con đường mơ ước",unit:"Thôn Yên Thái 2"},{stt:13,name:"Thiên Mã Đón Trăng",unit:"Trường THCS Mậu A 1"},{stt:14,name:"Việt Nam vươn cao - Vui trung thu - thêm tự hào",unit:"Tiểu học Mậu A 2"},{stt:15,name:"Phượng hoàng chẩy hội",unit:"Trường Mầm Non Mậu A 2"},{stt:16,name:"Đón trăng về bản",unit:"Thôn Yên Thái 1"},{stt:17,name:"Đèn Lồng Trung Thu",unit:"Trường PTDTNT THCS&THPT"},{stt:18,name:"Cá Chép",unit:"Thôn An Thịnh 2"},{stt:19,name:"Thỏ Ngọc trông trăng",unit:"Thôn Mậu A 3"},{stt:20,name:"Mái chùa đón trăng",unit:"Trường THCS Mậu A 2"},{stt:21,name:"Đèn ông sao và đèn kéo quân",unit:"Trường THPH Chu Văn An"},{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Thôn Mậu A1"},{stt:23,name:"Ngôi Sao",unit:"Thôn Mậu A 2"},{stt:24,name:"Cá Chép",unit:"Thôn Mậu Đông 2"},{stt:25,name:"Trăng thu đất việt",unit:"Trường Mầm Non Ban Mai"},{stt:26,name:"Thỏ Ngọc Cung Trăng",unit:"Thôn An Thịnh 5"},{stt:27,name:"Mặt trăng rằm tháng 8",unit:"Thôn An Thịnh 3"}];
+const MMap={}; MODELS.forEach(m=>MMap[m.stt]=m);
+function parseSupabaseTime(s){ if(!s) return null; let t=String(s).trim().replace(' ','T'); t=t.replace(/([+-]\d{2})$/, '$1:00').replace(/([+-]\d{2})(\d{2})$/, '$1:$2'); if(!/[Z]$/.test(t) && !/[+-]\d{2}:\d{2}$/.test(t)) t+='Z'; const d=new Date(t); return isNaN(d)? new Date(s): d; }
+function toVN(iso){ if(!iso) return null; try{ const d=parseSupabaseTime(iso); return d.toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour12:false}); }catch(e){ return String(iso); } }
+function toVNISO(iso){ if(!iso) return null; try{ const d=parseSupabaseTime(iso); const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d); const o={}; p.forEach(x=>o[x.type]=x.value); return `${o.year}-${o.month}-${o.day}T${o.hour}:${o.minute}:${o.second}+07:00`; }catch(e){ return String(iso); } }
+function downloadJSON(name, data){ const json=JSON.stringify(data, null, 2); const blob=new Blob([json],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},800); }
+async function fetchPaginated(table, select, clog){
+  const limit=1000; let offset=0; let all=[]; let total=null;
+  for(let page=0; page<30; page++){
+    const url=`${DC.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=created_at.asc&limit=${limit}&offset=${offset}`;
+    let r=null;
+    for(let retry=0; retry<3; retry++){
+      try{ r=await fetch(url,{headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`,Prefer:'count=exact'}}); break; }catch(e){ if(retry===2) throw e; await new Promise(res=>setTimeout(res,400*(retry+1))); }
+    }
+    if(!r.ok){ const t=await r.text(); if(clog) clog.textContent+=`❌ ${table} ${r.status}: ${t.substring(0,220)}\n`; throw new Error(`${table} ${r.status}`); }
+    const rows=await r.json();
+    const cr=r.headers.get('content-range')||r.headers.get('Content-Range')||'';
+    const m=cr.match(/\/(\d+)/); if(m) total=parseInt(m[1],10);
+    all=all.concat(rows);
+    if(clog) clog.textContent+=`  ${table}: ${all.length}${total!=null?`/${total}`:''} (page ${page+1})\n`;
+    if(rows.length < limit) break;
+    offset+=limit;
+    if(total!=null && all.length>=total) break;
+  }
+  return {rows: all, total: total!=null?total:all.length};
+}
+async function fetchAllAudience(){
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){ alert('Nhập mã TT2026'); document.getElementById('pw').focus(); return null; }
+  const clog=document.getElementById('log');
+  if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang tải (pagination 1000)...\n'; }
+  const bcSelect='device_id,sdt,ho_ten,thon,ten,stt,voter_ip,user_agent,created_at';
+  const duSelect='device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at';
+  const bcP=fetchPaginated('binh_chon_khan_gia', bcSelect, clog);
+  const duP=fetchPaginated('du_doan', duSelect, clog).catch(async e=>{
+    if(clog) clog.textContent+=`du_doan err, thử view: ${e.message}\n`;
+    return fetchPaginated('v_du_doan_public', duSelect, clog);
+  });
+  const [bcRes, duRes]=await Promise.all([bcP, duP]);
+  if(clog) clog.textContent+=`✅ Đã tải đủ: ${bcRes.rows.length}/${bcRes.total} phiếu, ${duRes.rows.length}/${duRes.total} đoán\n`;
+  return {bc:bcRes.rows, du:duRes.rows, bcTotal:bcRes.total, duTotal:duRes.total};
+}
+function analyzeHackData(bc, du, ipThresh){
+  const ipMap=new Map(), sdtMap=new Map();
+  bc.forEach(r=>{
+    if(r.voter_ip){ const k=r.voter_ip.trim(); if(!ipMap.has(k)) ipMap.set(k,[]); ipMap.get(k).push(r); }
+    if(r.sdt){ const s=String(r.sdt).trim(); if(!sdtMap.has(s)) sdtMap.set(s,[]); sdtMap.get(s).push(r); }
+  });
+  du.forEach(r=>{ if(r.sdt){ const s=String(r.sdt).trim(); if(!sdtMap.has(s)) sdtMap.set(s,[]); sdtMap.get(s).push({...r,_isDu:true}); } });
+  const suspicious=[];
+  const add=(r, reason, level)=>{
+    let found=suspicious.find(x=>x.device_id===r.device_id);
+    if(found){ found.reasons.push(reason); if(level==='CRITICAL') found.level='CRITICAL'; }
+    else suspicious.push({device_id:r.device_id, sdt:r.sdt||'', ho_ten:(r.ho_ten||r.ten||'').trim(), thon:(r.thon||'').trim(), stt:r.stt||r.stt_du_doan||'', voter_ip:r.voter_ip||'', user_agent:(r.user_agent||'').substring(0,80), created_at:r.created_at, created_at_vn:toVN(r.created_at), level, reasons:[reason]});
+  };
+  ipMap.forEach((arr,ip)=>{
+    if(arr.length >= ipThresh){
+      const stts=[...new Set(arr.map(x=>x.stt))];
+      const level=arr.length>=10?'CRITICAL':'WARN';
+      arr.forEach(r=> add(r, `IP ${ip} có ${arr.length} phiếu (STT ${stts.slice(0,3).join(',')})`, level));
+    }
+  });
+  sdtMap.forEach((arr,sdt)=>{
+    if(arr.length>=2){
+      const devs=[...new Set(arr.map(x=>x.device_id))];
+      if(devs.length>=2) arr.forEach(r=> add(r, `SĐT ${sdt} trùng ${arr.length} phiếu / ${devs.length} device`, 'CRITICAL'));
+    }
+  });
+  const uniq=new Map(); suspicious.forEach(s=> uniq.set(s.device_id, s));
+  const out=[...uniq.values()].sort((a,b)=> (a.level==='CRITICAL'?0:1)-(b.level==='CRITICAL'?0:1) || parseSupabaseTime(a.created_at)-parseSupabaseTime(b.created_at));
+  return {suspicious:out, totalBc:bc.length, totalDu:du.length};
+}
+let lastValid=null, lastSuspicious=null, lastBc=null;
+async function analyzeAndShowConfirm(){
+  const ipThresh=parseInt(document.getElementById('ipThresh')?.value||'5',10)||5;
+  const data=await fetchAllAudience(); if(!data) return;
+  const res=analyzeHackData(data.bc, data.du, ipThresh);
+  lastSuspicious=res; lastBc=data.bc;
+  const suspiciousIds=new Set(res.suspicious.map(s=>s.device_id));
+  const validBc=data.bc.filter(r=> !suspiciousIds.has(r.device_id));
+  lastValid=validBc;
+  // đếm hiện tại vs hợp lệ per STT
+  const curCounts={}, validCounts={};
+  data.bc.forEach(r=> curCounts[r.stt]=(curCounts[r.stt]||0)+1);
+  validBc.forEach(r=> validCounts[r.stt]=(validCounts[r.stt]||0)+1);
+  const totalCur=data.bc.length, totalValid=validBc.length, totalDel=suspiciousIds.size;
+  document.getElementById('confirmSub').textContent=`Tổng ${totalCur} → Hợp lệ ${totalValid} (xóa ${totalDel} hack IP≥${ipThresh}) • 27 đơn vị`;
+  document.getElementById('confirmDelCount').textContent=totalDel;
+  let html=`<div style="max-height:58vh;overflow:auto;border:1px solid #fde68a;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px"><thead><tr style="background:#166534;color:#fff;position:sticky;top:0"><th style="padding:6px 8px">STT</th><th style="padding:6px 8px;text-align:left">Linh vật</th><th style="padding:6px 8px;text-align:left">Thôn</th><th style="padding:6px 8px;text-align:center">Hiện tại</th><th style="padding:6px 8px;text-align:center">Hợp lệ ↓</th><th style="padding:6px 8px;text-align:center">Bị xóa</th></tr></thead><tbody>`;
+  [...MODELS].sort((a,b)=> (validCounts[b.stt]||0)-(validCounts[a.stt]||0) || (curCounts[b.stt]||0)-(curCounts[a.stt]||0) || a.stt-b.stt).forEach(m=>{
+    const cur=curCounts[m.stt]||0, val=validCounts[m.stt]||0, del=cur-val;
+    const rowBg=del>0?'background:#fef2f2':'';
+    html+=`<tr style="border-top:1px solid #fde68a;${rowBg}"><td style="padding:6px 8px;text-align:center">${m.stt}</td><td style="padding:6px 8px;font-weight:600">${m.name}</td><td style="padding:6px 8px">${m.unit}</td><td style="padding:6px 8px;text-align:center">${cur}</td><td style="padding:6px 8px;text-align:center;font-weight:800;color:#166534">${val}</td><td style="padding:6px 8px;text-align:center;color:${del>0?'#dc2626':'#64748b'}">${del>0?`-${del}`:'0'}</td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  html+=`<div style="margin-top:10px;padding:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534">Sau khi xác nhận, <b>${totalDel} phiếu hack</b> sẽ bị xóa vĩnh viễn khỏi Supabase, bảng trên sẽ là kết quả chính thức.</div>`;
+  document.getElementById('confirmBody').innerHTML=html;
+  document.getElementById('confirmOverlay').classList.add('open');
+  // cũng render preview 27 ở trang chính
+  document.getElementById('mainTableWrap').innerHTML=html;
+  document.getElementById('stat').textContent=`${totalValid} hợp lệ / ${totalCur} tổng`;
+  document.getElementById('log').textContent+=`Đã phân tích: ${totalCur} → ${totalValid} hợp lệ (xóa ${totalDel})\n`;
+}
+function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('open'); }
+async function confirmUpdate(){
+  if(!lastSuspicious || !lastBc){ alert('Chưa phân tích'); return; }
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){ alert('Nhập mã TT2026'); return; }
+  if(!confirm(`Xác nhận ghi ${lastValid.length} phiếu hợp lệ vào Supabase?\nSẽ XÓA ${lastSuspicious.suspicious.length} phiếu hack vĩnh viễn!`)) return;
+  if(!confirm(`Chắc chắn xóa ${lastSuspicious.suspicious.length} dòng hack?`)) return;
+  const ids=[...new Set(lastSuspicious.suspicious.map(s=>s.device_id))];
+  const clog=document.getElementById('log'); if(clog){ clog.style.display='block'; clog.textContent+=`⏳ Đang xóa ${ids.length} hack...\n`; }
+  const chunkSize=100; let deleted=0;
+  for(let i=0;i<ids.length;i+=chunkSize){
+    const chunk=ids.slice(i,i+chunkSize);
+    const inFilter=`device_id=in.(${chunk.map(v=>`"${v}"`).join(',')})`;
+    const [r1,r2]=await Promise.all([
+      fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?${inFilter}`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}}),
+      fetch(`${DC.url}/rest/v1/du_doan?${inFilter}`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}})
+    ]);
+    if(r1.ok) deleted+=chunk.length;
+    if(clog) clog.textContent+=`  Batch ${Math.floor(i/chunkSize)+1}: ${deleted}/${ids.length}\n`;
+    await new Promise(r=>setTimeout(r,200));
+  }
+  if(clog) clog.textContent+=`✅ Đã ghi Supabase: còn ${lastValid.length} hợp lệ\n`;
+  closeConfirm();
+  showValidDetail();
+}
+let validDetailCache=null;
+function showValidDetail(){
+  if(!lastValid){ alert('Chưa có dữ liệu hợp lệ'); return; }
+  const sorted=[...lastValid].sort((a,b)=> parseSupabaseTime(b.created_at)-parseSupabaseTime(a.created_at)).slice(0,300);
+  validDetailCache=sorted;
+  let html=`<div style="margin-bottom:8px;padding:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534">Hiển thị 300/${lastValid.length} mới nhất — IP, SĐT, thôn, linh vật</div>`;
+  html+=`<div style="max-height:58vh;overflow:auto;border:1px solid #bbf7d0;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:720px"><thead><tr style="background:#166534;color:#fff;position:sticky;top:0"><th style="padding:6px 8px">#</th><th style="padding:6px 8px;text-align:left">IP</th><th style="padding:6px 8px;text-align:left">Thôn</th><th style="padding:6px 8px;text-align:left">STT / Linh vật</th><th style="padding:6px 8px;text-align:left">SĐT / Họ tên</th><th style="padding:6px 8px;text-align:left">Thời gian VN</th></tr></thead><tbody>`;
+  sorted.forEach((r,i)=>{
+    const m=MMap[r.stt];
+    html+=`<tr style="border-top:1px solid #e5f5e0"><td style="padding:6px 8px;text-align:center">${i+1}</td><td style="padding:6px 8px;font-family:monospace">${r.voter_ip||'null'}</td><td style="padding:6px 8px">${(r.thon||'').substring(0,18)}</td><td style="padding:6px 8px">STT ${r.stt}<br><span style="color:#57534e">${m?m.name.substring(0,22):''}</span></td><td style="padding:6px 8px"><b>${r.sdt?String(r.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2'): '—'}</b><br><span style="color:#475569">${(r.ho_ten||r.ten||'').substring(0,18)}</span></td><td style="padding:6px 8px;white-space:nowrap">${toVN(r.created_at)}</td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('detailBody').innerHTML=html;
+  document.getElementById('detailSub').textContent=`${lastValid.length} phiếu hợp lệ — 300 mới nhất`;
+  document.getElementById('validDetailOverlay').classList.add('open');
+}
+function closeDetail(){ document.getElementById('validDetailOverlay').classList.remove('open'); }
+function filterDetail(){
+  const q=(document.getElementById('detailSearch')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#detailBody tbody tr').forEach(tr=>{
+    tr.style.display=!q || tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+function clearDetailFilter(){ const el=document.getElementById('detailSearch'); if(el) el.value=''; filterDetail(); }
+function copyDetail(){
+  if(!validDetailCache) return;
+  let txt=`PHIẾU HỢP LỆ — ${validDetailCache.length} dòng (200 mới nhất) — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}\n`;
+  validDetailCache.slice(0,200).forEach((r,i)=>{
+    const m=MMap[r.stt];
+    txt+=`${i+1}. IP ${r.voter_ip||'null'} — ${r.thon||'—'} — STT ${r.stt} ${m?m.name:''} — ${r.sdt||'—'} ${(r.ho_ten||r.ten||'').trim()} — ${toVN(r.created_at)}\n`;
+  });
+  navigator.clipboard.writeText(txt).then(()=> alert('Đã copy')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Đã copy');
+  });
+}
+function exportDetailJSON(){
+  if(!validDetailCache) return;
+  const out={exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total_valid:validDetailCache.length, data:validDetailCache.map(r=>({stt:r.stt, ten_mo_hinh:MMap[r.stt]?.name||null, don_vi:MMap[r.stt]?.unit||null, thon:r.thon, sdt:r.sdt, ho_ten:(r.ho_ten||r.ten||'').trim(), voter_ip:r.voter_ip, created_at:toVNISO(r.created_at), created_at_vn:toVN(r.created_at), device_id:r.device_id}))};
+  downloadJSON(`valid_detail_${new Date().toISOString().slice(0,10)}_${validDetailCache.length}.json`, out);
+}
+async function analyzeFile(input){
+  const file=input.files?.[0]; if(!file) return;
+  const clog=document.getElementById('log'); if(clog){ clog.style.display='block'; clog.textContent=`⏳ Đang đọc ${file.name}...\n`; }
+  try{
+    const text=await file.text();
+    const json=JSON.parse(text);
+    let bc=[], du=[];
+    if(json.data && Array.isArray(json.data)){
+      json.data.forEach(d=>{
+        if(d.binh_chon) bc.push({device_id:d.device_id, sdt:d.sdt, ho_ten:d.ho_ten, thon:d.thon, stt:d.binh_chon.stt, voter_ip:d.binh_chon.voter_ip, user_agent:d.binh_chon.user_agent, created_at:d.binh_chon.created_at_utc||d.binh_chon.created_at});
+        if(d.du_doan) du.push({device_id:d.device_id, sdt:d.sdt, ho_ten:d.ho_ten, thon:d.thon, stt_du_doan:d.du_doan.tong, tong_du_doan:d.du_doan.tong, created_at:d.du_doan.created_at_utc||d.du_doan.created_at});
+      });
+    }
+    const ipThresh=parseInt(document.getElementById('ipThresh')?.value||'5',10)||5;
+    const res=analyzeHackData(bc, du, ipThresh);
+    // fake fetchAllAudience for file
+    const fakeData={bc, du, bcTotal:bc.length, duTotal:du.length};
+    // reuse logic
+    const suspiciousIds=new Set(res.suspicious.map(s=>s.device_id));
+    const validBc=bc.filter(r=> !suspiciousIds.has(r.device_id));
+    lastSuspicious=res; lastSuspicious._bc=bc; lastValid=validBc;
+    // show confirm popup with file data
+    const curCounts={}, validCounts={};
+    bc.forEach(r=> curCounts[r.stt]=(curCounts[r.stt]||0)+1);
+    validBc.forEach(r=> validCounts[r.stt]=(validCounts[r.stt]||0)+1);
+    document.getElementById('confirmSub').textContent=`File ${file.name} — Tổng ${bc.length} → Hợp lệ ${validBc.length} (xóa ${suspiciousIds.size})`;
+    let html=`<div style="max-height:58vh;overflow:auto;border:1px solid #fde68a;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px"><thead><tr style="background:#166534;color:#fff;position:sticky;top:0"><th style="padding:6px 8px">STT</th><th style="padding:6px 8px;text-align:left">Linh vật</th><th style="padding:6px 8px;text-align:left">Thôn</th><th style="padding:6px 8px;text-align:center">Hiện tại</th><th style="padding:6px 8px;text-align:center">Hợp lệ</th><th style="padding:6px 8px;text-align:center">Bị xóa</th></tr></thead><tbody>`;
+    MODELS.forEach(m=>{
+      const cur=curCounts[m.stt]||0, val=validCounts[m.stt]||0, del=cur-val;
+      html+=`<tr style="border-top:1px solid #fde68a;${del>0?'background:#fef2f2':''}"><td style="padding:6px 8px;text-align:center">${m.stt}</td><td style="padding:6px 8px;font-weight:600">${m.name}</td><td style="padding:6px 8px">${m.unit}</td><td style="padding:6px 8px;text-align:center">${cur}</td><td style="padding:6px 8px;text-align:center;font-weight:800;color:#166534">${val}</td><td style="padding:6px 8px;text-align:center;color:${del>0?'#dc2626':'#64748b'}">${del>0?`-${del}`:'0'}</td></tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    document.getElementById('confirmBody').innerHTML=html;
+    document.getElementById('confirmDelCount').textContent=suspiciousIds.size;
+    document.getElementById('confirmOverlay').classList.add('open');
+    if(clog) clog.textContent+=`Đã phân tích file: ${bc.length} → ${validBc.length} hợp lệ\n`;
+  }catch(e){ const clog=document.getElementById('log'); if(clog) clog.textContent+='❌ '+e.message; }
+  input.value='';
+}
+function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('open'); }
+function closeDetail(){ document.getElementById('validDetailOverlay').classList.remove('open'); }
+</script>
+</body>
+</html>

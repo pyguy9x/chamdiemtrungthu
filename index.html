@@ -1317,8 +1317,14 @@ async function loadSummary(){
       const dr=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
       if(dr.ok){ const drows=await dr.json(); drows.forEach(x=> duDoanMap[x.stt_du_doan]=(duDoanMap[x.stt_du_doan]||0)+1); }
     }catch(e){}
-    const sorted=[...rows].sort((a,b)=> (b.diem_tb||0)-(a.diem_tb||0));
-    const rankMap={}; sorted.forEach((r,i)=>{ if(i>0 && r.diem_tb===sorted[i-1].diem_tb) rankMap[r.stt]=rankMap[sorted[i-1].stt]; else rankMap[r.stt]=i+1; });
+    // sort top3 theo Số bình chọn (voteMap), fallback diem_tb
+    const getVotes = stt => voteMap[stt]||0;
+    const sorted=[...rows].sort((a,b)=> {
+      const va=getVotes(a.stt), vb=getVotes(b.stt);
+      if(vb!==va) return vb-va;
+      return (b.diem_tb||0)-(a.diem_tb||0);
+    });
+    const rankMap={}; sorted.forEach((r,i)=>{ const prev=sorted[i-1]; if(i>0 && getVotes(r.stt)===getVotes(prev.stt) && (r.diem_tb||0)===(prev.diem_tb||0)) rankMap[r.stt]=rankMap[prev.stt]; else rankMap[r.stt]=i+1; });
     rows.forEach(r=> r.hang=rankMap[r.stt]);
     rows.sort((a,b)=> a.hang-b.hang || a.stt-b.stt);
     let html=`<div class="summary-wrap"><div class="summary-head"><h2>📊 Bảng tổng hợp điểm (${rows.length} mô hình)</h2><button onclick="loadSummary()">↻ Làm mới</button></div><div class="table-scroll"><table class="summary-table"><thead><tr><th>Hạng</th><th>STT</th><th>Tên mô hình</th><th>Đơn vị</th><th>GK Lợi</th><th>GK Hiếu</th><th>GK Hùng</th><th>GK Loan</th><th>GK Cường</th><th>TB</th><th>🗳️ Khán giả</th><th>🔮 Dự đoán</th></tr></thead><tbody>`;
