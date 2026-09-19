@@ -419,13 +419,17 @@ async function submitAudienceInfo(){
   }
   showStatus('','success');
   saveAudienceInfo({ten, thon, sdt, ts:Date.now()});
-  showAudienceDuDoan();
+  // Bình chọn đã kết thúc — hiện thông báo thay vì chuyển tab
+  showStatus('Bình chọn đã kết thúc','error');
+  const cc=document.getElementById('audienceEntry');
+  if(cc) cc.innerHTML=`<div class="audience-wrap"><div class="audience-head" style="background:linear-gradient(135deg,#57534e,#44403c)"><div class="a-icon">🔒</div><h2>Bình chọn đã kết thúc</h2><p>Cảm ơn bạn đã quan tâm!<br>Cổng bình chọn đã đóng lúc 19:30.</p></div><div class="audience-body" style="text-align:center;padding:24px"><p style="color:#57534e">Hẹn gặp lại mùa sau!</p></div></div>`;
+  document.getElementById('tabBar').innerHTML='';
+  const bar2=document.getElementById('statusBar'); if(bar2){ bar2.style.display='block'; bar2.textContent='Bình chọn đã kết thúc'; bar2.className='status-bar error'; bar2.scrollIntoView({behavior:'smooth',block:'center'}); }
 }
 function buildAudienceTabs(active){
   const bar=document.getElementById('tabBar');
   const eActive=active==='entry'?'active':'';
-  const dActive=active==='dudoan'?'active':'';
-  bar.innerHTML=`<button class="tab-btn ${eActive}" onclick="showAudienceEntryTab()" style="background:${eActive?'#6366f1':'#fff'};color:${eActive?'#fff':'#6366f1'};border:1px solid #c7d2fe">📝 Thông tin</button><button class="tab-btn ${dActive}" onclick="showAudienceDuDoan()" style="background:${dActive?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${dActive?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
+  bar.innerHTML=`<button class="tab-btn ${eActive}" onclick="showAudienceEntryTab()" style="background:${eActive?'#6366f1':'#fff'};color:${eActive?'#fff':'#6366f1'};border:1px solid #c7d2fe">📝 Thông tin</button>`;
 }
 function showAudienceEntryTab(){
   document.getElementById('audienceEntry').style.display='';
@@ -545,8 +549,7 @@ function buildTabs(){
     }
   });
   h+=`<button class="tab-btn ${isSummary?'active':''}" onclick="showSummary(this)" style="background:${isSummary?'#ff6f00':'#fff3e0'};color:${isSummary?'#fff':'#e65100'};border:1px solid #ffcc80">📊 Tổng hợp</button>`;
-  // tab Bình chọn đã ẩn theo yêu cầu
-  h+=`<button class="tab-btn ${isDuDoan?'active':''}" onclick="showDuDoan()" style="background:${isDuDoan?'linear-gradient(135deg,#a78bfa,#7c3aed)':'#ede9fe'};color:${isDuDoan?'#fff':'#5b21b6'};border:1px solid #ddd6fe">🔮 Dự đoán</button>`;
+  // tab Bình chọn + Dự đoán đã ẩn theo yêu cầu
   bar.innerHTML=h;
   refreshOtherTotals();
 }
