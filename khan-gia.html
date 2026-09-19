@@ -764,6 +764,18 @@ function getDeviceId(){
   if(!id){ id=crypto.randomUUID(); try{localStorage.setItem(VOTE_DEVICE_KEY,id);}catch(e){} }
   return id;
 }
+async function isIpBanned(ip){
+  if(!ip) return false;
+  try{
+    const localBanned=JSON.parse(localStorage.getItem('banned_ips')||'[]');
+    if(localBanned.includes(ip)) return true;
+    if(config && config.url && config.key){
+      const r=await fetch(`${config.url}/rest/v1/banned_ips?ip=eq.${encodeURIComponent(ip)}&select=ip`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r.ok){ const rows=await r.json(); if(rows.length) return true; }
+    }
+  }catch(e){}
+  return false;
+}
 async function buildVoteUI(){
   const c=document.getElementById("voteContainer");
   const done=localStorage.getItem(VOTE_DONE_KEY);
@@ -867,6 +879,12 @@ async function confirmVote(){
     let payload={stt:stt, device_id:device_id, voter_ip:null, user_agent:navigator.userAgent.substring(0,200), sdt:sdt};
     if(aud){ payload.ho_ten=aud.ten; payload.thon=aud.thon; payload.ten=aud.ten; }
     try{ const ipR=await fetch('https://api.ipify.org?format=json',{signal:AbortSignal.timeout(2000)}); if(ipR.ok){ const j=await ipR.json(); payload.voter_ip=j.ip; } }catch(e){}
+    if(payload.voter_ip && await isIpBanned(payload.voter_ip)){
+      if(btn){ btn.disabled=false; btn.textContent='Bình chọn'; }
+      showVoteStatus('🚫 IP '+payload.voter_ip+' đã bị cấm bình chọn do nghi ngờ hack. Vui lòng liên hệ BTC.','error');
+      alert('🚫 IP '+payload.voter_ip+' đã bị cấm bình chọn do nghi ngờ gian lận.\nVui lòng liên hệ BTC nếu nhầm lẫn.');
+      return;
+    }
     let r=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payload)});
     if(!r.ok){
       const t0=await r.text();

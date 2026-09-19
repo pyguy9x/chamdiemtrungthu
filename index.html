@@ -783,8 +783,57 @@ function closeVoteGate(){
 }
 function getDeviceId(){
   let id=localStorage.getItem(VOTE_DEVICE_KEY);
-  if(!id){ id=crypto.randomUUID(); try{localStorage.setItem(VOTE_DEVICE_KEY,id);}catch(e){} }
+  if(!id){ 
+    // fingerprint nhe: userAgent + screen + language + timezone
+    const fp = btoa((navigator.userAgent||'') + '|' + (screen.width+'x'+screen.height) + '|' + (navigator.language||'') + '|' + Intl.DateTimeFormat().resolvedOptions().timeZone).substring(0,120);
+    id = fp.replace(/[^a-zA-Z0-9]/g,'').substring(0,16) + '-' + crypto.randomUUID();
+    try{localStorage.setItem(VOTE_DEVICE_KEY,id);}catch(e){} 
+  }
   return id;
+}
+let __ipBannedCache={ip:null, at:0, banned:false};
+async function isIpBanned(ip){
+  if(!ip) return false;
+  try{
+    const localBanned=JSON.parse(localStorage.getItem('banned_ips')||'[]');
+    if(localBanned.includes(ip)) return true;
+  }catch(e){}
+  // cache 2 phut de tranh spam request
+  if(__ipBannedCache.ip===ip && Date.now()-__ipBannedCache.at<120000) return __ipBannedCache.banned;
+  try{
+    if(config && config.url && config.key){
+      const r=await fetch(`${config.url}/rest/v1/banned_ips?ip=eq.${encodeURIComponent(ip)}&select=ip`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+      if(r.ok){ 
+        const rows=await r.json(); 
+        const banned = rows.length>0;
+        __ipBannedCache={ip, at:Date.now(), banned};
+        if(banned){
+          // dong bo vao local
+          try{ const arr=JSON.parse(localStorage.getItem('banned_ips')||'[]'); if(!arr.includes(ip)){ arr.push(ip); localStorage.setItem('banned_ips', JSON.stringify(arr)); } }catch(e){}
+        }
+        return banned; 
+      }
+    }
+  }catch(e){}
+  return false;
+}
+
+async function isIpOverLimit(ip){
+  // check nhanh so phieu cua IP nay trong 10 phut gan nhat
+  if(!ip || !config) return false;
+  try{
+    const r=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia?voter_ip=eq.${encodeURIComponent(ip)}&select=created_at&order=created_at.desc&limit=20`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+    if(!r.ok) return false;
+    const rows=await r.json();
+    if(rows.length<8) return false;
+    const tenMinAgo = Date.now()-10*60*1000;
+    let cnt=0;
+    for(const row of rows){
+      const ts = new Date(row.created_at).getTime();
+      if(ts>tenMinAgo) cnt++;
+    }
+    return cnt>=6; // >=6 phieu/10p la burst
+  }catch(e){ return false; }
 }
 async function buildVoteUI(){
   const c=document.getElementById("voteContainer");
@@ -898,6 +947,15 @@ async function confirmVote(){
     let payload={stt:stt, device_id:device_id, voter_ip:null, user_agent:navigator.userAgent.substring(0,200), sdt:sdt};
     if(aud){ payload.ho_ten=aud.ten; payload.thon=aud.thon; payload.ten=aud.ten; }
     try{ const ipR=await fetch('https://api.ipify.org?format=json',{signal:AbortSignal.timeout(2000)}); if(ipR.ok){ const j=await ipR.json(); payload.voter_ip=j.ip; } }catch(e){}
+    // lay them ip tu ipify lan 2 de tranh fake
+    if(!payload.voter_ip){ try{ const r2=await fetch('https://ipinfo.io/json',{signal:AbortSignal.timeout(2000)}); if(r2.ok){ const j2=await r2.json(); if(j2.ip) payload.voter_ip=j2.ip; } }catch(e){} }
+    if(payload.voter_ip && await isIpBanned(payload.voter_ip)){
+
+      if(btn){ btn.disabled=false; btn.textContent='Bình chọn'; }
+      showVoteStatus('🚫 IP '+payload.voter_ip+' đã bị cấm bình chọn do nghi ngờ hack. Vui lòng liên hệ BTC.','error');
+      alert('🚫 IP '+payload.voter_ip+' đã bị cấm bình chọn do nghi ngờ gian lận.\nVui lòng liên hệ BTC nếu nhầm lẫn.');
+      return;
+    }
     let r=await fetch(`${config.url}/rest/v1/binh_chon_khan_gia`,{method:'POST',headers:{apikey:config.key,Authorization:`Bearer ${config.key}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(payload)});
     if(!r.ok){
       const t0=await r.text();
