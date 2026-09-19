@@ -43,6 +43,9 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
       <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="analyzeAndShowConfirm()">🔍 Phân tích — hiện 27 đơn vị</button>
       <label class="btn btn-ghost" style="flex:1;min-width:160px;cursor:pointer;text-align:center">📂 Chọn file JSON<input type="file" id="fileInput" accept=".json" style="display:none" onchange="analyzeFile(this)"></label>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:800" onclick="showHackDetailPopup()">🚨 IP hack chi tiết (SĐT, họ tên, linh vật)</button>
+    </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <label style="font-size:12px;display:flex;align-items:center;gap:6px">Ngưỡng IP <input id="ipThresh" type="number" value="5" min="2" max="20" style="width:60px"> phiếu</label>
       <span id="stat" style="font-size:11px;color:#64748b"></span>
@@ -84,14 +87,44 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
       <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="clearDetailFilter()">✕ Xóa</button>
     </div>
     <div class="reset-modal-body" id="detailBody" style="flex:1;overflow:auto;max-height:62vh;padding:0 12px 12px"></div>
-    <div class="reset-modal-actions" style="flex-shrink:0">
+    <div class="reset-modal-actions" style="flex-shrink:0;flex-wrap:wrap">
       <button class="reset-modal-btn cancel" onclick="closeDetail()">Đóng</button>
-      <button class="btn btn-ghost" style="flex:1;min-width:120px;font-size:12px" onclick="copyDetail()">📋 Copy</button>
-      <button class="btn btn-ghost" style="flex:1;min-width:120px;font-size:12px;background:#0e7490;color:#fff" onclick="exportDetailJSON()">📥 Export JSON</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px" onclick="copyDetail()">📋 Copy</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#16a34a;color:#fff" onclick="exportDetailExcel()">📊 Excel</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#2563eb;color:#fff" onclick="exportDetailHtml()">🌐 HTML</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#0e7490;color:#fff" onclick="exportDetailJSON()">📥 JSON</button>
     </div>
   </div>
 </div>
 
+<!-- Popup IP hack chi tiết -->
+<div class="reset-overlay" id="hackDetailOverlay" onclick="if(event.target===this) closeHackDetailPopup()">
+  <div class="reset-modal" style="max-width:860px;width:98%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="reset-modal-head" style="flex-shrink:0">
+      <div class="reset-modal-icon" style="background:linear-gradient(135deg,#fee2e2,#fca5a5)">🚨</div>
+      <div class="reset-modal-title">IP Hack chi tiết — kèm SĐT, họ tên, linh vật</div>
+      <div class="reset-modal-sub" id="hackDetailSub">Lọc từ file JSON bạn gửi — IP, thôn, STT buff</div>
+    </div>
+    <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#fef2f2;border-bottom:1px solid #fecaca;flex-shrink:0">
+      <input id="hackDetailSearch" placeholder="Lọc IP / thôn / STT / SĐT / tên" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #fecaca;border-radius:8px;font-size:12px" oninput="filterHackDetail()">
+      <select id="hackDetailLevel" style="padding:6px 8px;border:1px solid #fecaca;border-radius:8px;font-size:12px" onchange="filterHackDetail()">
+        <option value="ALL">Tất cả mức</option>
+        <option value="CRITICAL">Chỉ CRITICAL</option>
+        <option value="WARN">Chỉ WARN</option>
+      </select>
+      <span id="hackDetailFilterInfo" style="font-size:11px;color:#991b1b"></span>
+      <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="clearHackDetailFilter()">✕ Xóa lọc</button>
+    </div>
+    <div class="reset-modal-body" id="hackDetailBody" style="flex:1;overflow:auto;max-height:60vh;padding:0 12px 12px"></div>
+    <div class="reset-modal-actions" style="flex-shrink:0;flex-wrap:wrap">
+      <button class="reset-modal-btn cancel" onclick="closeHackDetailPopup()">Đóng</button>
+      <button class="reset-modal-btn confirm" style="background:#f59e0b" onclick="copyHackDetail()">📋 Copy</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#16a34a;color:#fff" onclick="exportHackDetailExcel()">📊 Excel</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:110px;font-size:12px;background:#2563eb;color:#fff" onclick="exportHackDetailHtml()">🌐 HTML</button>
+      <button class="reset-modal-btn confirm" style="background:#dc2626" onclick="exportHackDetailJSON()">📥 JSON</button>
+    </div>
+  </div>
+</div>
 <script>
 const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
 const MODELS=[{stt:1,name:"Hào khí rồng vàng",unit:"Thôn Mậu Đông 1"},{stt:2,name:"Đại sứ bạch thỏ",unit:"Thôn Mậu A 5"},{stt:3,name:"Ngôi sao An Thịnh 1 - vui trung thu gắn kết cộng đồng",unit:"Thôn An Thịnh 1"},{stt:4,name:"Ánh trăng rằm bản em",unit:"Trường Mầm non Sơn Ca"},{stt:5,name:"Ký ức quê hương",unit:"Thôn Yên Thái 2"},{stt:6,name:"Tết trung thu - trăng sáng trên thác khe cam",unit:"Tiểu học Mậu A 1"},{stt:7,name:"Trung thu vùng cao - giữ gìn bản sắc - thắp sáng ước mơ",unit:"Thôn Ngòi A 3"},{stt:8,name:"Ánh trăng miền Quế",unit:"Trường Mầm Non Mậu A 1"},{stt:9,name:"Cá Chép",unit:"Thôn Ngòi A 1"},{stt:10,name:"Vầng trăng khuyết",unit:"Trường THPH Lương Bằng"},{stt:11,name:"Đèn Kéo Quân",unit:"Thôn Mậu A 6"},{stt:12,name:"Con đường mơ ước",unit:"Thôn Yên Thái 2"},{stt:13,name:"Thiên Mã Đón Trăng",unit:"Trường THCS Mậu A 1"},{stt:14,name:"Việt Nam vươn cao - Vui trung thu - thêm tự hào",unit:"Tiểu học Mậu A 2"},{stt:15,name:"Phượng hoàng chẩy hội",unit:"Trường Mầm Non Mậu A 2"},{stt:16,name:"Đón trăng về bản",unit:"Thôn Yên Thái 1"},{stt:17,name:"Đèn Lồng Trung Thu",unit:"Trường PTDTNT THCS&THPT"},{stt:18,name:"Cá Chép",unit:"Thôn An Thịnh 2"},{stt:19,name:"Thỏ Ngọc trông trăng",unit:"Thôn Mậu A 3"},{stt:20,name:"Mái chùa đón trăng",unit:"Trường THCS Mậu A 2"},{stt:21,name:"Đèn ông sao và đèn kéo quân",unit:"Trường THPH Chu Văn An"},{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Thôn Mậu A1"},{stt:23,name:"Ngôi Sao",unit:"Thôn Mậu A 2"},{stt:24,name:"Cá Chép",unit:"Thôn Mậu Đông 2"},{stt:25,name:"Trăng thu đất việt",unit:"Trường Mầm Non Ban Mai"},{stt:26,name:"Thỏ Ngọc Cung Trăng",unit:"Thôn An Thịnh 5"},{stt:27,name:"Mặt trăng rằm tháng 8",unit:"Thôn An Thịnh 3"}];
@@ -223,9 +256,11 @@ async function confirmUpdate(){
   showValidDetail();
 }
 let validDetailCache=null;
+let hackDetailCache=null;
 function showValidDetail(){
   if(!lastValid){ alert('Chưa có dữ liệu hợp lệ'); return; }
-  const sorted=[...lastValid].sort((a,b)=> parseSupabaseTime(b.created_at)-parseSupabaseTime(a.created_at)).slice(0,300);
+  const validCountsSort={}; lastValid.forEach(r=> validCountsSort[r.stt]=(validCountsSort[r.stt]||0)+1);
+  const sorted=[...lastValid].sort((a,b)=>{ const ca=validCountsSort[a.stt]||0, cb=validCountsSort[b.stt]||0; if(cb!==ca) return cb-ca; return parseSupabaseTime(b.created_at)-parseSupabaseTime(a.created_at); }).slice(0,300);
   validDetailCache=sorted;
   let html=`<div style="margin-bottom:8px;padding:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534">Hiển thị 300/${lastValid.length} mới nhất — IP, SĐT, thôn, linh vật</div>`;
   html+=`<div style="max-height:58vh;overflow:auto;border:1px solid #bbf7d0;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:720px"><thead><tr style="background:#166534;color:#fff;position:sticky;top:0"><th style="padding:6px 8px">#</th><th style="padding:6px 8px;text-align:left">IP</th><th style="padding:6px 8px;text-align:left">Thôn</th><th style="padding:6px 8px;text-align:left">STT / Linh vật</th><th style="padding:6px 8px;text-align:left">SĐT / Họ tên</th><th style="padding:6px 8px;text-align:left">Thời gian VN</th></tr></thead><tbody>`;
@@ -261,6 +296,136 @@ function exportDetailJSON(){
   if(!validDetailCache) return;
   const out={exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total_valid:validDetailCache.length, data:validDetailCache.map(r=>({stt:r.stt, ten_mo_hinh:MMap[r.stt]?.name||null, don_vi:MMap[r.stt]?.unit||null, thon:r.thon, sdt:r.sdt, ho_ten:(r.ho_ten||r.ten||'').trim(), voter_ip:r.voter_ip, created_at:toVNISO(r.created_at), created_at_vn:toVN(r.created_at), device_id:r.device_id}))};
   downloadJSON(`valid_detail_${new Date().toISOString().slice(0,10)}_${validDetailCache.length}.json`, out);
+}
+
+function showHackDetailPopup(){
+  if(!lastSuspicious || !lastSuspicious.suspicious.length){
+    alert('Chưa có kết quả — bấm “Phân tích — hiện 27 đơn vị” hoặc chọn file JSON trước');
+    return;
+  }
+  // build per-IP hack detail with full info
+  const ipMap=new Map();
+  lastSuspicious.suspicious.forEach(s=>{
+    const ip=s.voter_ip||'null';
+    if(!ipMap.has(ip)) ipMap.set(ip,{ip, count:0, stts:new Map(), thons:new Map(), sdtSet:new Set(), names:[], devices:[]});
+    const a=ipMap.get(ip);
+    a.count++;
+    a.stts.set(s.stt,(a.stts.get(s.stt)||0)+1);
+    if(s.thon) a.thons.set(s.thon,(a.thons.get(s.thon)||0)+1);
+    if(s.sdt) a.sdtSet.add(s.sdt);
+    a.devices.push(s);
+    if(a.names.length<3 && s.ho_ten) a.names.push(s.ho_ten);
+  });
+  const rows=[...ipMap.entries()].sort((a,b)=> b[1].count - a[1].count);
+  hackDetailCache=rows;
+  let html=`<div style="margin-bottom:8px;padding:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b">Tổng <b>${lastSuspicious.suspicious.length}</b> phiếu hack từ <b>${rows.length}</b> IP — chi tiết SĐT, họ tên, thôn, linh vật buff</div>`;
+  html+=`<div style="max-height:58vh;overflow:auto;border:1px solid #fecaca;border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:860px"><thead><tr style="background:#991b1b;color:#fff;position:sticky;top:0"><th style="padding:6px 8px;text-align:left">IP hack</th><th style="padding:6px 8px;text-align:center">Số lần</th><th style="padding:6px 8px;text-align:left">Thôn / Linh vật buff (STT)</th><th style="padding:6px 8px;text-align:left">Họ tên / SĐT / Đơn vị</th><th style="padding:6px 8px;text-align:left">Thời gian hack</th><th style="padding:6px 8px;text-align:left">Bằng chứng</th></tr></thead><tbody>`;
+  rows.slice(0,100).forEach(([ip,a])=>{
+    const topStts=[...a.stts.entries()].sort((x,y)=>y[1]-x[1]).slice(0,2).map(([stt,c])=>{
+      const m=MMap[stt]; return `STT ${stt} ${m?m.name.substring(0,20):''} (${c})`;
+    }).join('<br>');
+    const thonTop=[...a.thons.entries()].sort((x,y)=>y[1]-x[1])[0];
+    const thonStr=thonTop?`${thonTop[0]} (${thonTop[1]})`:'—';
+    const sdtList=[...a.sdtSet].slice(0,3).map(s=> String(s)).join('<br>');
+    const nameList=a.devices.slice(0,3).map(s=> `${(s.ho_ten||'—').substring(0,18)}<br><span style="color:#78716c">${s.sdt?String(s.sdt):''}</span>`).join('<hr style="margin:4px 0;border:none;border-top:1px dashed #ffe4e6">');
+    const ev=a.devices[0]?.reasons?.slice(0,2).join('<br>')||'';
+    const times=a.devices.map(d=>parseSupabaseTime(d.created_at)).filter(Boolean).sort((x,y)=>x-y);
+    const firstTime=times[0]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times[0].getTime()).created_at):'';
+    const lastTime=times[times.length-1]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times[times.length-1].getTime()).created_at):'';
+    const timeCell = firstTime + (times.length>1 ? `<br><span style="color:#78716c">→ ${lastTime}</span>` : '');
+    html+=`<tr style="border-top:1px solid #ffe4e6"><td style="padding:6px 8px;font-family:monospace;font-weight:700">${ip}<br><span style="font-size:10px;color:#dc2626">${a.count} lần</span></td><td style="padding:6px 8px;text-align:center;font-weight:800;color:#991b1b">${a.count}</td><td style="padding:6px 8px"><b>${thonStr}</b><br><span style="font-size:10px">${topStts}</span></td><td style="padding:6px 8px;max-width:220px">${nameList}<br><span style="font-size:10px;color:#92400e">${sdtList}</span></td><td style="padding:6px 8px;font-size:10px;white-space:nowrap">${timeCell}</td><td style="padding:6px 8px;max-width:220px;word-break:break-word;font-size:10px">${ev}</td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  if(rows.length>100) html+=`<div style="padding:8px 12px;background:#fffbeb;color:#92400e;font-size:11px;text-align:center">Hiển thị 100/${rows.length} IP • Dùng lọc để tìm thôn/STT</div>`;
+  document.getElementById('hackDetailBody').innerHTML=html;
+  document.getElementById('hackDetailSub').textContent=`${rows.length} IP hack • ${lastSuspicious.suspicious.length} phiếu • Top ${rows[0]?.[0]||''}`;
+  document.getElementById('hackDetailOverlay').classList.add('open');
+}
+function closeHackDetailPopup(){ document.getElementById('hackDetailOverlay').classList.remove('open'); }
+function filterHackDetail(){
+  const q=(document.getElementById('hackDetailSearch')?.value||'').toLowerCase().trim();
+  const lvl=document.getElementById('hackDetailLevel')?.value||'ALL';
+  // level not used for hackDetail (all are hack), keep for future
+  document.querySelectorAll('#hackDetailBody tbody tr').forEach(tr=>{
+    const ok=!q || tr.textContent.toLowerCase().includes(q);
+    tr.style.display=ok?'':'none';
+  });
+  const shown=[...document.querySelectorAll('#hackDetailBody tbody tr')].filter(tr=>tr.style.display!=='none').length;
+  const total=document.querySelectorAll('#hackDetailBody tbody tr').length;
+  const info=document.getElementById('hackDetailFilterInfo');
+  if(info) info.textContent=`Hiển thị ${shown}/${total}`;
+}
+function clearHackDetailFilter(){ const el=document.getElementById('hackDetailSearch'); if(el) el.value=''; filterHackDetail(); }
+function copyHackDetail(){
+  if(!hackDetailCache){ alert('Chưa có dữ liệu'); return; }
+  // hackDetailCache is rows from last show
+  let txt=`BÁO CÁO IP HACK CHI TIẾT — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}\n`;
+  const rows=hackDetailCache.slice(0,50);
+  rows.forEach(([ip,a],i)=>{
+    const topStt=[...a.stts.entries()].sort((x,y)=>y[1]-x[1])[0];
+    const m=topStt?MMap[topStt[0]]:null;
+    const times2=a.devices.map(d=>parseSupabaseTime(d.created_at)).filter(Boolean).sort((x,y)=>x-y); const first2=times2[0]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times2[0].getTime()).created_at):''; const last2=times2[times2.length-1]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times2[times2.length-1].getTime()).created_at):''; txt+=`${i+1}. IP ${ip} — ${a.count} lần — Thôn ${[...a.thons.keys()].join(',')} — STT ${topStt?topStt[0]:''} ${m?m.name:''} — SĐT: ${[...a.sdtSet].slice(0,3).join(', ')} — Tên: ${a.devices.slice(0,2).map(s=>s.ho_ten).join(', ')} — Thời gian: ${first2}${times2.length>1?` → ${last2}`:''}\n`;
+  });
+  navigator.clipboard.writeText(txt).then(()=> alert('Đã copy')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Đã copy');
+  });
+}
+function exportHackDetailJSON(){
+  if(!hackDetailCache){ alert('Chưa có dữ liệu'); return; }
+  const out={exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total_ip:hackDetailCache.length, data:hackDetailCache.map(([ip,a])=>{ const times=a.devices.map(d=>parseSupabaseTime(d.created_at)).filter(Boolean).sort((x,y)=>x-y); const first=times[0]?toVNISO(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times[0].getTime()).created_at):null; const last=times[times.length-1]?toVNISO(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times[times.length-1].getTime()).created_at):null; return {ip, count:a.count, thons:[...a.thons.entries()], stts:[...a.stts.entries()], sdts:[...a.sdtSet], first_time:first, last_time:last, first_time_vn:times[0]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times[0].getTime()).created_at):null, last_time_vn:times[times.length-1]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===times[times.length-1].getTime()).created_at):null, devices:a.devices.slice(0,5).map(s=>({ho_ten:s.ho_ten, sdt:s.sdt, thon:s.thon, stt:s.stt, voter_ip:s.voter_ip, created_at:toVNISO(s.created_at), created_at_vn:toVN(s.created_at)}))}; })};
+  downloadJSON(`hack_detail_${new Date().toISOString().slice(0,10)}.json`, out);
+}
+function exportDetailExcel(){
+  if(!validDetailCache || !validDetailCache.length){ alert('Chưa có dữ liệu — bấm Phân tích trước'); return; }
+  const cols=['#','IP','Thôn','STT','Linh vật','SĐT','Họ tên','Thời gian VN'];
+  let html='<html><head><meta charset="UTF-8"></head><body><table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Segoe UI;font-size:11px"><thead><tr style="background:#166534;color:#fff">'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+  validDetailCache.slice(0,300).forEach((r,i)=>{
+    const m=MMap[r.stt];
+    html+=`<tr><td>${i+1}</td><td>${r.voter_ip||''}</td><td>${(r.thon||'').replace(/&/g,'&amp;')}</td><td>${r.stt}</td><td>${(m?m.name:'').replace(/&/g,'&amp;')}</td><td style="mso-number-format:'\\@'">${r.sdt||''}</td><td>${(r.ho_ten||r.ten||'').replace(/&/g,'&amp;')}</td><td>${toVN(r.created_at)||''}</td></tr>`;
+  });
+  html+='</tbody></table></body></html>';
+  const blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`valid_detail_${new Date().toISOString().slice(0,10)}.xls`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function exportDetailHtml(){
+  if(!validDetailCache || !validDetailCache.length){ alert('Chưa có dữ liệu'); return; }
+  let html=`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Phiếu hợp lệ — Trung thu 2026</title><style>body{font-family:Segoe UI,sans-serif;padding:20px;background:#fffbeb}h1{color:#166534}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#166534;color:#fff;padding:8px}td{padding:6px 8px;border:1px solid #bbf7d0}tr:nth-child(even){background:#f0fdf4}</style></head><body><h1>Phiếu hợp lệ — 300 mới nhất — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</h1><p>Tổng hợp lệ: ${validDetailCache.length} — Hiển thị 300</p><table><thead><tr><th>#</th><th>IP</th><th>Thôn</th><th>STT / Linh vật</th><th>SĐT / Họ tên</th><th>Thời gian VN</th></tr></thead><tbody>`;
+  validDetailCache.slice(0,300).forEach((r,i)=>{
+    const m=MMap[r.stt];
+    html+=`<tr><td>${i+1}</td><td>${r.voter_ip||''}</td><td>${(r.thon||'').replace(/&/g,'&amp;')}</td><td>STT ${r.stt}<br>${(m?m.name:'').replace(/&/g,'&amp;')}</td><td><b>${r.sdt||''}</b><br>${(r.ho_ten||r.ten||'').replace(/&/g,'&amp;')}</td><td>${toVN(r.created_at)||''}</td></tr>`;
+  });
+  html+=`</tbody></table><p style="font-size:11px;color:#64748b">Xuất từ ketqua.html — ${new Date().toISOString()}</p></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`valid_detail_${new Date().toISOString().slice(0,10)}.html`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function exportHackDetailExcel(){
+  if(!hackDetailCache || !hackDetailCache.length){ alert('Chưa có dữ liệu — bấm Phân tích trước'); return; }
+  let html='<html><head><meta charset="UTF-8"></head><body><table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Segoe UI;font-size:11px"><thead><tr style="background:#991b1b;color:#fff"><th>IP hack</th><th>Số lần</th><th>Thôn</th><th>STT / Linh vật</th><th>Họ tên / SĐT</th><th>Thời gian hack</th><th>Bằng chứng</th></tr></thead><tbody>';
+  hackDetailCache.slice(0,100).forEach(([ip,a])=>{
+    const topStt=[...a.stts.entries()].sort((x,y)=>y[1]-x[1])[0];
+    const m=topStt?MMap[topStt[0]]:null;
+    const thon=[...a.thons.entries()].sort((x,y)=>y[1]-x[1])[0]?.[0]||'';
+    const sdt=[...a.sdtSet].slice(0,3).join(', ');
+    const names=a.devices.slice(0,3).map(s=>s.ho_ten).join(', ');
+    const ev=a.devices[0]?.reasons?.slice(0,2).join('; ')||'';
+    html+=`<tr><td>${ip}</td><td>${a.count}</td><td>${thon.replace(/&/g,'&amp;')}</td><td>STT ${topStt?topStt[0]:''} ${m?m.name.replace(/&/g,'&amp;'):''}</td><td>${names.replace(/&/g,'&amp;')}<br><span style="mso-number-format:'\\@'">${sdt}</span></td><td>${ev.replace(/&/g,'&amp;')}</td></tr>`;
+  });
+  html+='</tbody></table></body></html>';
+  const blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`hack_detail_${new Date().toISOString().slice(0,10)}.xls`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function exportHackDetailHtml(){
+  if(!hackDetailCache || !hackDetailCache.length){ alert('Chưa có dữ liệu'); return; }
+  let html=`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>IP Hack chi tiết — Trung thu 2026</title><style>body{font-family:Segoe UI,sans-serif;padding:20px;background:#fffbeb}h1{color:#991b1b}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#991b1b;color:#fff;padding:8px}td{padding:6px 8px;border:1px solid #fecaca}tr:nth-child(even){background:#fef2f2}</style></head><body><h1>IP Hack chi tiết — ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</h1><p>Tổng ${hackDetailCache.length} IP hack</p><table><thead><tr><th>IP</th><th>Số lần</th><th>Thôn</th><th>STT / Linh vật</th><th>Họ tên / SĐT</th><th>Thời gian hack</th><th>Bằng chứng</th></tr></thead><tbody>`;
+  hackDetailCache.slice(0,100).forEach(([ip,a])=>{
+    const topStt=[...a.stts.entries()].sort((x,y)=>y[1]-x[1])[0];
+    const m=topStt?MMap[topStt[0]]:null;
+    const thon=[...a.thons.entries()].sort((x,y)=>y[1]-x[1])[0]?.[0]||'';
+    html+=`<tr><td>${ip}</td><td>${a.count}</td><td>${thon.replace(/&/g,'&amp;')}</td><td>STT ${topStt?topStt[0]:''} ${m?m.name.replace(/&/g,'&amp;'):''}</td><td>${[...a.sdtSet].slice(0,3).join(', ')}<br>${a.devices.slice(0,3).map(s=>s.ho_ten).join(', ').replace(/&/g,'&amp;')}</td><td>${(() => { const ts=a.devices.map(d=>parseSupabaseTime(d.created_at)).filter(Boolean).sort((x,y)=>x-y); const f=ts[0]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===ts[0].getTime()).created_at):''; const l=ts[ts.length-1]?toVN(a.devices.find(d=>parseSupabaseTime(d.created_at).getTime()===ts[ts.length-1].getTime()).created_at):''; return f + (ts.length>1 ? `<br>→ ${l}` : ''); })()}</td><td>${(a.devices[0]?.reasons?.slice(0,2).join('; ')||'').replace(/&/g,'&amp;')}</td></tr>`;
+  });
+  html+=`</tbody></table></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`hack_detail_${new Date().toISOString().slice(0,10)}.html`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
 }
 async function analyzeFile(input){
   const file=input.files?.[0]; if(!file) return;

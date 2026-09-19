@@ -343,6 +343,7 @@ let scores={};
 let config=null;
 const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
 const SK=key=>`cd2026_${key}`;
+function isVoteClosed(){ try{ if(localStorage.getItem('voting_closed')==='1') return true; const now=new Date(); const close=new Date(); close.setHours(19,30,0,0); return now>=close; }catch(e){ return false; } }
 
 let isSummary=false;
 let isVote=false;
@@ -792,9 +793,12 @@ async function buildVoteUI(){
     const r=await fetch(`${config.url}/rest/v1/du_doan?select=stt_du_doan`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
     if(r.ok){ const rows=await r.json(); rows.forEach(x=> duDoanCounts[x.stt_du_doan]=(duDoanCounts[x.stt_du_doan]||0)+1); }
   }catch(e){}
+  const closed=isVoteClosed();
   let banner='';
   const mVoted=done?MODELS.find(x=>String(x.stt)===String(done)):null;
-  if(done){
+  if(closed){
+    banner=`<div class="vote-banner locked" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca">🔒 Bình chọn đã kết thúc lúc 19:30 — các bình chọn không hợp lệ</div>`;
+  } else if(done){
     banner=`<div class="vote-banner locked">✅ Bạn đã bình chọn: STT ${done}. ${mVoted?mVoted.name:''} — mỗi thiết bị chỉ 1 lần</div>`;
   } else {
     banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích — mỗi thiết bị chỉ 1 phiếu bình chọn</div>`;
@@ -828,9 +832,10 @@ async function buildVoteUI(){
     const countColor=isZero?'#90a4ae':'#37474f';
     const isThisVoted=String(done)===String(m.stt);
     const anyVoted=!!done;
-    const btnText=isThisVoted?'✅ Đã chọn':(anyVoted?'Đã khóa':'Bình chọn');
-    const btnClass=isThisVoted?'vote-btn voted':'vote-btn';
-    const dis=anyVoted?'disabled':'';
+    let btnText=isThisVoted?'✅ Đã chọn':(anyVoted?'Đã khóa':'Bình chọn');
+    let btnClass=isThisVoted?'vote-btn voted':'vote-btn';
+    let dis=anyVoted?'disabled':'';
+    if(closed){ btnText='Đã đóng'; btnClass='vote-btn'; dis='disabled'; }
     const isThisDuDoan=String(doneDuDoan)===String(m.stt);
     const anyDuDoan=!!doneDuDoan;
     const duDoanText=isThisDuDoan?'✅ Đã đoán':(anyDuDoan?'Đã khóa':'🔮 Dự đoán');
@@ -838,7 +843,8 @@ async function buildVoteUI(){
     const dis2=anyDuDoan?'disabled':'';
     const duDoanBadgeBg=soDuDoan===0?'#eceff1':'#ede9fe';
     const duDoanBadgeColor=soDuDoan===0?'#78909c':'#5b21b6';
-    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div></div></div><div class="vote-card-body"><div class="vote-count" style="color:${countColor}">Phiếu: <b>${soPhieu}</b></div><div><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button></div></div></div>`;
+    const btnHtml= closed ? `<div style="padding:8px;text-align:center;color:#991b1b;font-size:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">🔒 Đã đóng — không hợp lệ</div>` : `<div><button class="${btnClass}" ${dis} onclick="vote(${m.stt},this)">${btnText}</button></div>`;
+    html+=`<div class="vote-card" style="border-left-color:${tc};background:${cardBg}"><div class="vote-card-head" style="background:transparent"><div><div class="v-info">STT ${m.stt}. ${m.name}</div><div class="v-unit">${m.unit}</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div class="total" style="background:${badgeBg};min-width:46px;text-align:center;padding:4px 10px;border-radius:10px;color:${badgeColor};font-weight:bold;border:1px solid ${isZero?'#cfd8dc':'rgba(0,0,0,.06)'}">${soPhieu} phiếu</div></div></div><div class="vote-card-body">${btnHtml}</div></div>`;
   });
   html+=`</div>`;
   c.innerHTML=html;
@@ -881,6 +887,7 @@ function closeVoteModal(){
   document.getElementById('voteModalConfirm').onclick=confirmVote;
 }
 async function vote(stt,btn){
+  if(isVoteClosed()){ showVoteStatus('🔒 Bình chọn đã kết thúc lúc 19:30 — các bình chọn không hợp lệ','error'); return; }
   const done=localStorage.getItem(VOTE_DONE_KEY);
   if(done){ showVoteStatus('⚠️ Bạn đã bình chọn rồi — 1 điện thoại chỉ 1 phiếu','error'); return; }
   if(!config){ showVoteStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
