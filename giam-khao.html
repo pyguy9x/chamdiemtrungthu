@@ -993,6 +993,7 @@ openVoteModal=function(stt,btn){
   resetSdtInput();
 }
 async function buildDuDoanUI(){
+  const SHOW_SDT = (()=>{ try{ if(new URLSearchParams(location.search).has('showSdt')) return true; if(new URLSearchParams(location.search).has('showWinners')) return true; if(localStorage.getItem('voting_closed')==='1') return true; const now=new Date(); const close=new Date(); close.setHours(19,30,0,0); if(now>=close) return true; }catch(e){} return false; })();
   const c=document.getElementById("dudoanContainer");
   const done=localStorage.getItem(DUDOAN_DONE_KEY);
   const doneVal=done? parseInt(done): null;
@@ -1060,7 +1061,7 @@ async function buildDuDoanUI(){
     const prizes=['🥇 Giải Nhất','🥈 Giải Nhì','🥉 Giải Ba'];
     const prizeColors=['linear-gradient(90deg,#fff8e1,#ffecb3)','linear-gradient(90deg,#f3e5f5,#e1bee7)','linear-gradient(90deg,#e3f2fd,#bbdefb)'];
     top3.forEach((x,i)=>{
-      const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+      const sdtMask=x.sdt? (SHOW_SDT? String(x.sdt) : String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2')) : '—';
       const ten=(x.ho_ten||x.ten||'—').trim();
       resultHtml+=`<div style="background:${prizeColors[i]};border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(0,0,0,.06)"><div style="font-weight:800;color:#5b21b6">${prizes[i]}</div><div style="font-weight:700;margin:6px 0">${ten}</div><div style="font-size:12px;color:#475569">${sdtMask}</div><div style="margin-top:6px;background:#fff;padding:4px 8px;border-radius:20px;font-weight:800;border:1px solid #ddd6fe">${x._pred} người</div><div style="font-size:11px;color:#5b21b6;margin-top:4px">Chênh lệch: ${x._diff}</div></div>`;
     });
@@ -1072,14 +1073,14 @@ async function buildDuDoanUI(){
     list.slice(0,100).forEach((x,i)=>{
       const rank=i+1;
       const badge= rank===1?'<span style="background:#ff6f00;color:#fff;padding:2px 8px;border-radius:12px;font-weight:800">🥇 1</span>': rank===2?'<span style="background:#8e24aa;color:#fff;padding:2px 8px;border-radius:12px">🥈 2</span>': rank===3?'<span style="background:#1565c0;color:#fff;padding:2px 8px;border-radius:12px">🥉 3</span>':`<span style="background:#eceff1;color:#37474f;padding:2px 8px;border-radius:12px">${rank}</span>`;
-      const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+      const sdtMask=x.sdt? (SHOW_SDT? String(x.sdt) : String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2')) : '—';
       const ten=(x.ho_ten||x.ten||'—').trim();
       const thon=(x.thon||'').trim()||'—';
       const s=formatVNTime(x.created_at);
       const rowBg= rank===1?'background:linear-gradient(90deg,#fff8e1,#ffecb3)': (i%2===0?'background:#fff':'background:#f8fafc');
       resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${badge}</td><td style="padding:8px 10px;font-weight:600;max-width:140px;word-break:break-word">${ten}</td><td style="padding:8px 10px;max-width:120px;word-break:break-word">${thon}</td><td style="padding:8px 10px;white-space:nowrap;font-weight:600">${sdtMask}</td><td style="padding:8px 10px;text-align:center;font-weight:800">${x._pred}</td><td style="padding:8px 10px;text-align:center;color:${x._diff===0?'#2e7d32':'#5b21b6'};font-weight:700">${x._diff}</td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
     });
-    resultHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Xếp theo chênh lệch |tổng thực - dự đoán| tăng dần, trùng số thì gửi sớm thắng • Hiển thị 100/${list.length} • Tổng thực tế cập nhật theo lượt bình chọn</div></div>`;
+    resultHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Xếp theo chênh lệch |tổng thực - dự đoán| tăng dần, trùng số thì gửi sớm thắng • SĐT ${SHOW_SDT?'công khai':'ẩn đến 19:30'} • Hiển thị 100/${list.length} • Tổng thực tế cập nhật theo lượt bình chọn</div></div>`;
   } else {
     resultHtml=`<div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.06)">Chưa có ai dự đoán — hãy là người đầu tiên!</div>`;
   }

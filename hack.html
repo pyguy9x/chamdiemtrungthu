@@ -69,6 +69,9 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="showValidVotesPopup()">✅ Bình chọn hợp lệ — 200 mới nhất (IP, thôn, linh vật)</button>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:200px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="updateValidCountsToSupabase()">🔄 Cập nhật phiếu hợp lệ lên Supabase (xóa hack)</button>
+    </div>
     <p style="font-size:11px;color:#a8a29e;margin-top:8px">Hiển thị 200/<span id="hackTotal">0</span> • Tick để chọn xóa hàng loạt ở dưới (dùng với Nút Reset đã chọn). CRITICAL: SĐT trùng / IP≥10. WARN: IP≥5 / UA / burst.</p>
   </div>
 </div>
@@ -270,7 +273,7 @@ async function analyzeHackLive(){
   if(wrap) wrap.innerHTML='';
   const data=await fetchAllAudience(); if(!data) return;
   const res=analyzeHackData(data.bc, data.du, ipThresh);
-  suspiciousGlobal=res;
+  suspiciousGlobal=res; suspiciousGlobal._bc=data.bc; suspiciousGlobal._du=data.du;
   document.getElementById('hackTotal').textContent=res.suspicious.length;
   if(clog) clog.textContent+=`Đã phân tích ${data.bc.length} phiếu, ${data.du.length} đoán — phát hiện ${res.suspicious.length} device nghi ngờ\n`;
   if(stat) stat.textContent=`${res.suspicious.length} nghi ngờ / ${data.bc.length} phiếu`;
@@ -293,7 +296,7 @@ async function analyzeHackFile(input){
     } else { throw new Error('JSON không đúng dạng khan_gia_...device.json'); }
     const ipThresh=parseInt(document.getElementById('hackIpThresh')?.value||'5',10)||5;
     const res=analyzeHackData(bc, du, ipThresh);
-    suspiciousGlobal=res;
+    suspiciousGlobal=res; suspiciousGlobal._bc=bc; suspiciousGlobal._du=du;
     document.getElementById('hackTotal').textContent=res.suspicious.length;
     if(clog) clog.textContent+=`Đã đọc ${bc.length} phiếu từ file — phát hiện ${res.suspicious.length} nghi ngờ\n`;
     if(stat) stat.textContent=`${res.suspicious.length} nghi ngờ / ${bc.length} phiếu (file)`;
@@ -560,6 +563,72 @@ function copyThonHackReport(){
   navigator.clipboard.writeText(thonHackReportText).then(()=> alert('Đã copy báo cáo ngắn gọn thôn — dán vào Zalo')).catch(()=>{
     const ta=document.createElement('textarea'); ta.value=thonHackReportText; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('Đã copy');
   });
+}
+async function updateValidCountsToSupabase(){
+  if(!suspiciousGlobal || !suspiciousGlobal.suspicious.length){
+    alert('Chưa có kết quả phân tích — bấm “Phân tích live” hoặc chọn file trước');
+    return;
+  }
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){ alert('Nhập mã TT2026 ở ô trên'); document.getElementById('pw').focus(); return; }
+  const ipThresh=parseInt(document.getElementById('hackIpThresh')?.value||'5',10)||5;
+  const clog=document.getElementById('hackLog');
+  // Lấy full bc mới nhất để tính hợp lệ chính xác
+  if(clog){ clog.style.display='block'; clog.textContent+='\n⏳ Đang tính phiếu hợp lệ...\n'; }
+  let bcFull=null;
+  if(suspiciousGlobal._bc && suspiciousGlobal._bc.length){
+    bcFull=suspiciousGlobal._bc;
+  } else {
+    const data=await fetchAllAudience(); if(!data) return;
+    bcFull=data.bc;
+    // cập nhật lại suspicious với data mới nếu cần
+    const res=analyzeHackData(data.bc, data.du, ipThresh);
+    suspiciousGlobal=res; suspiciousGlobal._bc=data.bc; suspiciousGlobal._du=data.du;
+    document.getElementById('hackTotal').textContent=res.suspicious.length;
+    renderHackTable(res);
+  }
+  const suspiciousIds=new Set(suspiciousGlobal.suspicious.map(s=>s.device_id));
+  const validBc=bcFull.filter(r=> !suspiciousIds.has(r.device_id));
+  const validCounts={};
+  validBc.forEach(r=>{ validCounts[r.stt]=(validCounts[r.stt]||0)+1; });
+  let preview=`Sẽ XÓA ${suspiciousIds.size} phiếu hack, giữ lại ${validBc.length} phiếu hợp lệ / ${bcFull.length} tổng.\n`;
+  preview+=`Phân bổ hợp lệ theo STT (top 10):\n`;
+  Object.entries(validCounts).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([stt,c])=>{
+    const m=MMap[stt]; preview+=`STT ${stt} ${m?m.name:''} (${m?m.unit:''}): ${c}\n`;
+  });
+  if(!confirm(preview+`\nXác nhận CẬP NHẬT Supabase? (sẽ XÓA vĩnh viễn ${suspiciousIds.size} dòng hack)`)) return;
+  if(!confirm(`Chắc chắn xóa ${suspiciousIds.size} dòng? Không khôi phục được!`)) return;
+  if(clog) clog.textContent+=`⏳ Đang xóa ${suspiciousIds.size} dòng hack (chia batch 100)...\n`;
+  const ids=[...suspiciousIds];
+  const chunkSize=100;
+  let deleted=0, failed=0;
+  for(let i=0;i<ids.length;i+=chunkSize){
+    const chunk=ids.slice(i,i+chunkSize);
+    const inFilter=`device_id=in.(${chunk.map(v=>`"${v}"`).join(',')})`;
+    try{
+      const [r1,r2]=await Promise.all([
+        fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?${inFilter}`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}}),
+        fetch(`${DC.url}/rest/v1/du_doan?${inFilter}`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}})
+      ]);
+      if(!r1.ok){
+        const t=await r1.text();
+        if(clog) clog.textContent+=`❌ binh_chon batch ${Math.floor(i/chunkSize)+1}: ${r1.status} ${t.substring(0,80)}\n`;
+        failed+=chunk.length;
+      } else {
+        deleted+=chunk.length;
+        if(clog) clog.textContent+=`  Đã xóa batch ${Math.floor(i/chunkSize)+1}: ${deleted}/${ids.length}\n`;
+      }
+    }catch(e){
+      if(clog) clog.textContent+=`❌ lỗi batch ${Math.floor(i/chunkSize)+1}: ${e.message}\n`;
+      failed+=chunk.length;
+    }
+    // tránh rate limit
+    await new Promise(r=>setTimeout(r,200));
+  }
+  if(clog) clog.textContent+=`✅ Xong: đã xóa ${deleted}, lỗi ${failed}. Phiếu hợp lệ còn lại: ${validBc.length}\n`;
+  alert(`Đã cập nhật Supabase:\n- Đã xóa: ${deleted} phiếu hack\n- Còn lại hợp lệ: ${validBc.length}\n- Lỗi: ${failed}\n\nPer STT hợp lệ:\n`+Object.entries(validCounts).sort((a,b)=>b[1]-a[1]).map(([stt,c])=>`STT ${stt}: ${c}`).join('\n'));
+  // làm mới phân tích
+  document.getElementById('hackStat').textContent=`Đã cập nhật: ${validBc.length} hợp lệ`;
 }
 let validVotesCache=null;
 async function showValidVotesPopup(){
