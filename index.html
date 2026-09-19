@@ -90,6 +90,9 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fffbeb;color:#44403c}
 .vote-banner{padding:12px 16px;border-radius:12px;margin-bottom:14px;text-align:center;font-weight:bold;backdrop-filter:blur(4px);box-shadow:0 2px 12px rgba(127,29,29,.08)}
 .vote-banner.locked{background:linear-gradient(135deg,#fef2f2 0%,#fffbeb 100%);color:#7f1d1d;border:1px solid #fde68a;position:sticky;top:8px;z-index:5}
 .vote-banner.open{background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);color:#92400e;border:1px solid #fcd34d;position:sticky;top:8px;z-index:5}
+.vote-countdown{padding:10px 16px;border-radius:12px;margin-bottom:10px;text-align:center;font-weight:800;background:linear-gradient(135deg,#7f1d1d,#b45309);color:#fef3c7;border:1px solid #fde68a;font-size:14px}
+.vote-countdown .t{font-variant-numeric:tabular-nums;letter-spacing:1px;font-size:17px;color:#fff}
+.vote-countdown.closed{background:#fef2f2;color:#991b1b;border-color:#fecaca}
 .vote-top-status{position:sticky;top:58px;z-index:4;margin-bottom:10px}
 .vote-top-status:empty{display:none}
 #dudoanContainer{max-width:100%;overflow:hidden}
@@ -370,7 +373,7 @@ function buildAudienceEntry(){
   const thons=[...new Set(MODELS.map(m=>m.unit))].sort();
   const thonOpts=['<option value="">-- Chọn thôn --</option>'].concat(thons.map(t=>`<option value="${t}" ${info.thon===t?'selected':''}>${t}</option>`)).join('') + '<option value="__khac">Khác (nhập tay)</option>';
   const isKhac = info.thon && !thons.includes(info.thon);
-  c.innerHTML=`<div class="audience-wrap"><div class="audience-head"><div class="a-icon">🎉</div><h2>Chào mừng khán giả!</h2><p>Vui lòng nhập thông tin trước khi bình chọn & dự đoán<br>Chỉ mất 10 giây — thông tin dùng để trao thưởng</p></div><div class="audience-body"><div class="audience-field"><label>👤 Họ và tên <span style="color:#ef4444">*</span></label><input id="audTen" type="text" placeholder="VD: Nguyễn Văn A" value="${(info.ten||'').replace(/"/g,'&quot;')}"><div class="audience-hint">Nhập đầy đủ họ tên</div></div><div class="audience-field"><label>🏘️ Thôn / Đơn vị <span style="color:#ef4444">*</span></label><select id="audThonSel" onchange="onThonChange()">${thonOpts}</select><input id="audThonOther" type="text" placeholder="Nhập thôn của bạn" style="margin-top:8px;${isKhac?'':'display:none'}" value="${isKhac?(info.thon||'').replace(/"/g,'&quot;'):''}"><div class="audience-hint">Chọn thôn trong danh sách hoặc chọn “Khác”</div></div><div class="audience-field"><label>📱 Số điện thoại <span style="color:#ef4444">*</span></label><input id="audSdt" type="tel" inputmode="numeric" maxlength="11" placeholder="VD: 0987654321" value="${(info.sdt||'').replace(/"/g,'&quot;')}"><div class="audience-hint">10-11 số, bắt đầu bằng 0 — dùng để nhận thưởng</div></div><div class="audience-actions"><button class="audience-btn" onclick="submitAudienceInfo()">Tiếp tục → Bình chọn</button></div><div class="audience-foot">🔒 Thông tin chỉ dùng để trao thưởng, không chia sẻ công khai<br><span style="font-size:11px;color:#94a3b8">Đã có thông tin? Hệ thống sẽ ghi nhớ cho lần sau</span></div></div></div>`;
+  c.innerHTML=`<div class="audience-wrap"><div class="audience-head"><div class="a-icon">🎉</div><h2>Chào mừng khán giả!</h2><p>Vui lòng nhập thông tin trước khi bình chọn & dự đoán<br>Chỉ mất 10 giây — thông tin dùng để trao thưởng</p></div><div class="audience-body"><div class="audience-field"><label>👤 Họ và tên <span style="color:#ef4444">*</span></label><input id="audTen" type="text" placeholder="VD: Nguyễn Văn A" value="${(info.ten||'').replace(/"/g,'&quot;')}"><div class="audience-hint">Nhập đầy đủ họ tên</div></div><div class="audience-field"><label>🏘️ Thôn / Đơn vị <span style="color:#ef4444">*</span></label><select id="audThonSel" onchange="onThonChange()">${thonOpts}</select><input id="audThonOther" type="text" placeholder="Nhập thôn của bạn" style="margin-top:8px;${isKhac?'':'display:none'}" value="${isKhac?(info.thon||'').replace(/"/g,'&quot;'):''}"><div class="audience-hint">Chọn thôn trong danh sách hoặc chọn “Khác”</div></div><div class="audience-field"><label>📱 Số điện thoại <span style="color:#ef4444">*</span></label><input id="audSdt" type="tel" inputmode="numeric" maxlength="11" placeholder="VD: 0987654321" value="${(info.sdt||'').replace(/"/g,'&quot;')}"><div class="audience-hint">10-11 số, bắt đầu bằng 0 — dùng để nhận thưởng</div></div><div style="margin:10px 0;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font-size:12px;color:#991b1b;text-align:center;line-height:1.4">⚠️ Hệ thống tự động phát hiện gian lận (1 IP &gt;5 phiếu, SĐT trùng).<br>IP hack sẽ bị <b>cấm vĩnh viễn</b> và phiếu bị xóa — hãy bình chọn công bằng!</div><div class="audience-actions"><button class="audience-btn" onclick="submitAudienceInfo()">Tiếp tục → Bình chọn</button></div><div class="audience-foot">🔒 Thông tin chỉ dùng để trao thưởng, không chia sẻ công khai<br><span style="font-size:11px;color:#94a3b8">Đã có thông tin? Hệ thống sẽ ghi nhớ cho lần sau</span></div></div></div>`;
   if(isKhac) document.getElementById('audThonSel').value='__khac';
 }
 function onThonChange(){ const sel=document.getElementById('audThonSel'); const other=document.getElementById('audThonOther'); if(sel.value==='__khac'){ other.style.display=''; other.focus(); } else { other.style.display='none'; } }
@@ -761,6 +764,23 @@ function showDuDoan(){
 // === Bình chọn khán giả: 1 điện thoại = 1 phiếu ===
 const VOTE_DEVICE_KEY='bc_device_id';
 const VOTE_DONE_KEY='da_binh_chon';
+const VOTE_CLOSE_AT=new Date('2026-09-19T19:30:00+07:00').getTime();
+function isVoteClosed(){ try{ if(localStorage.getItem('voting_closed')==='1') return true; }catch(e){} return Date.now()>=VOTE_CLOSE_AT; }
+function fmtLeft(ms){ if(ms<0)ms=0; var h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000); function p(n){return String(n).padStart(2,'0');} return p(h)+':'+p(m)+':'+p(s); }
+var _voteTicker=null;
+function ensureVoteTicker(){ if(_voteTicker) return; _voteTicker=setInterval(function(){
+  var bar=document.getElementById('voteCountdown');
+  if(!bar||bar.classList.contains('closed')) return;
+  if(isVoteClosed()){ closeVoteGate(); return; }
+  var el=document.getElementById('voteCountdownTime');
+  if(el) el.textContent=fmtLeft(VOTE_CLOSE_AT-Date.now());
+},1000); }
+function closeVoteGate(){
+  try{ localStorage.setItem('voting_closed','1'); }catch(e){}
+  buildVoteUI();
+  try{ if(sessionStorage.getItem('vote_closed_alerted')==='1') return; sessionStorage.setItem('vote_closed_alerted','1'); }catch(e){}
+  alert('Đã đến 19:30 — cổng bình chọn đã đóng. Cảm ơn bạn đã tham gia!');
+}
 function getDeviceId(){
   let id=localStorage.getItem(VOTE_DEVICE_KEY);
   if(!id){ id=crypto.randomUUID(); try{localStorage.setItem(VOTE_DEVICE_KEY,id);}catch(e){} }
@@ -784,7 +804,14 @@ async function buildVoteUI(){
   } else {
     banner=`<div class="vote-banner open">💖 Chọn 1 linh vật yêu thích — mỗi thiết bị chỉ 1 phiếu bình chọn</div>`;
   }
-  let html=banner+`<div class="vote-top-status"><div class="status-bar" id="voteStatus" style="display:none"></div><div class="status-bar" id="dudoanStatus" style="display:none"></div></div><div class="vote-grid">`;
+  const closed=isVoteClosed();
+  const cdBar=closed?`<div class="vote-countdown closed" id="voteCountdown">Đã đóng cổng bình chọn lúc 19:30</div>`:`<div class="vote-countdown" id="voteCountdown">Đóng cổng bình chọn sau <span class="t" id="voteCountdownTime">${fmtLeft(VOTE_CLOSE_AT-Date.now())}</span></div>`;
+  ensureVoteTicker();
+  if(closed){
+    banner=`<div class="vote-banner locked">Đã đóng cổng bình chọn lúc 19:30 — cảm ơn bạn đã tham gia!</div>`;
+  } else { // cổng mở: giữ banner mặc định theo done
+  }
+  let html=cdBar+banner+`<div class="vote-top-status"><div class="status-bar" id="voteStatus" style="display:none"></div><div class="status-bar" id="dudoanStatus" style="display:none"></div></div><div class="vote-grid">`;
   MODELS.forEach((m,idx)=>{
     const tc=totalColor(idx);
     const soPhieu=counts[m.stt]||0;
@@ -798,7 +825,7 @@ async function buildVoteUI(){
     const anyVoted=!!done;
     const btnText=isThisVoted?'✅ Đã chọn':(anyVoted?'Đã khóa':'Bình chọn');
     const btnClass=isThisVoted?'vote-btn voted':'vote-btn';
-    const dis=anyVoted?'disabled':'';
+    const dis=(anyVoted||closed)?'disabled':'';
     const isThisDuDoan=String(doneDuDoan)===String(m.stt);
     const anyDuDoan=!!doneDuDoan;
     const duDoanText=isThisDuDoan?'✅ Đã đoán':(anyDuDoan?'Đã khóa':'🔮 Dự đoán');
@@ -850,6 +877,7 @@ function closeVoteModal(){
   document.getElementById('voteModalConfirm').onclick=confirmVote;
 }
 async function vote(stt,btn){
+  if(isVoteClosed()){ showVoteStatus('Đã đóng cổng bình chọn lúc 19:30 — hẹn gặp lại!','error'); return; }
   const done=localStorage.getItem(VOTE_DONE_KEY);
   if(done){ showVoteStatus('⚠️ Bạn đã bình chọn rồi — 1 điện thoại chỉ 1 phiếu','error'); return; }
   if(!config){ showVoteStatus('⚠️ Chưa cấu hình Supabase','error'); return; }
@@ -857,6 +885,7 @@ async function vote(stt,btn){
   return;
 }
 async function confirmVote(){
+  if(isVoteClosed()){ closeVoteModal(); showVoteStatus('Đã đóng cổng bình chọn lúc 19:30 — hẹn gặp lại!','error'); buildVoteUI(); return; }
   if(!pendingVote) return;
   const sdt=getSdtOrAlert();
   if(!sdt) return;
@@ -1048,7 +1077,7 @@ async function buildDuDoanUI(){
       for(let i=list.length;i<3;i++){ resultHtml+=`<div style="background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;text-align:center;color:#94a3b8">Chưa có<br>${prizes[i]}</div>`; }
     }
     resultHtml+=`</div>`;
-    resultHtml+=`<div class="table-scroll" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px"><thead><tr style="background:#ede9fe;color:#5b21b6"><th style="padding:8px 10px">Hạng</th><th style="padding:8px 10px;text-align:left">Họ tên</th><th style="padding:8px 10px;text-align:left">Thôn</th><th style="padding:8px 10px;text-align:left">SĐT</th><th style="padding:8px 10px">Dự đoán</th><th style="padding:8px 10px">Chênh lệch</th><th style="padding:8px 10px;text-align:left">Thời gian</th></tr></thead><tbody>`;
+    if(!isVoteClosed()){ resultHtml+=`<div class="table-scroll" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:640px"><thead><tr style="background:#ede9fe;color:#5b21b6"><th style="padding:8px 10px">Hạng</th><th style="padding:8px 10px;text-align:left">Họ tên</th><th style="padding:8px 10px;text-align:left">Thôn</th><th style="padding:8px 10px;text-align:left">SĐT</th><th style="padding:8px 10px">Dự đoán</th><th style="padding:8px 10px">Chênh lệch</th><th style="padding:8px 10px;text-align:left">Thời gian</th></tr></thead><tbody>`;
     list.forEach((x,i)=>{
       const rank=i+1;
       const badge= rank===1?'<span style="background:#ff6f00;color:#fff;padding:2px 8px;border-radius:12px;font-weight:800">🥇 1</span>': rank===2?'<span style="background:#8e24aa;color:#fff;padding:2px 8px;border-radius:12px">🥈 2</span>': rank===3?'<span style="background:#1565c0;color:#fff;padding:2px 8px;border-radius:12px">🥉 3</span>':`<span style="background:#eceff1;color:#37474f;padding:2px 8px;border-radius:12px">${rank}</span>`;
@@ -1059,7 +1088,7 @@ async function buildDuDoanUI(){
       const rowBg= rank===1?'background:linear-gradient(90deg,#fff8e1,#ffecb3)': (i%2===0?'background:#fff':'background:#f8fafc');
       resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${badge}</td><td style="padding:8px 10px;font-weight:600;max-width:140px;word-break:break-word">${ten}</td><td style="padding:8px 10px;max-width:120px;word-break:break-word">${thon}</td><td style="padding:8px 10px;white-space:nowrap;font-weight:600">${sdtMask}</td><td style="padding:8px 10px;text-align:center;font-weight:800">${x._pred}</td><td style="padding:8px 10px;text-align:center;color:${x._diff===0?'#2e7d32':'#5b21b6'};font-weight:700">${x._diff}</td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
     });
-    resultHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Xếp theo chênh lệch |tổng thực - dự đoán| tăng dần, trùng số thì gửi sớm thắng • Tổng thực tế cập nhật theo lượt bình chọn</div></div>`;
+    resultHtml+=`</tbody></table></div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Xếp theo chênh lệch |tổng thực - dự đoán| tăng dần, trùng số thì gửi sớm thắng • Tổng thực tế cập nhật theo lượt bình chọn</div></div>`; } else { resultHtml+=`</div><div style="padding:8px 12px;background:#f8fafc;color:#64748b;font-size:11px;text-align:center">Cổng bình chọn đã đóng — chỉ công bố Top 3</div></div>`; }
   } else {
     resultHtml=`<div style="margin-bottom:14px;padding:12px;background:#fff;border-radius:10px;text-align:center;color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.06)">Chưa có ai dự đoán — hãy là người đầu tiên!</div>`;
   }

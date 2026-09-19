@@ -96,6 +96,26 @@ input{width:100%;padding:10px;border:1px solid #fde68a;border-radius:8px;margin-
     <p style="font-size:11px;color:#a8a29e;margin-top:8px">JSON UTF-8 pretty-printed. Gộp theo <code>device_id</code> — nếu chỉ bình chọn hoặc chỉ dự đoán thì field còn lại là <code>null</code>. Top 3 xếp theo <code>|dự đoán - tổng thực|</code>, trùng thì gửi sớm thắng.</p>
   </div>
 </div>
+<div class="card" style="max-width:720px">
+  <div class="head" style="background:linear-gradient(135deg,#dc2626,#991b1b)"><h1>🔍 Phát hiện hack bình chọn</h1><p style="font-size:12px;opacity:.9">IP ≥5, SĐT trùng, UA chùm, burst — chạy trên JSON xuất</p></div>
+  <div class="body" style="text-align:left">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:800" onclick="analyzeHackLive()">🔍 Phân tích live từ Supabase</button>
+      <label class="btn btn-ghost" style="flex:1;min-width:160px;cursor:pointer;text-align:center">📂 Chọn file JSON<input type="file" id="hackFileInput" accept=".json" style="display:none" onchange="analyzeHackFile(this)"></label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <label style="font-size:12px;display:flex;align-items:center;gap:6px">Ngưỡng IP <input id="hackIpThresh" type="number" value="5" min="2" max="20" style="width:60px;padding:4px;border:1px solid #fde68a;border-radius:6px;text-align:center"> phiếu</label>
+      <span id="hackStat" style="font-size:11px;color:#64748b"></span>
+    </div>
+    <div class="log" id="hackLog" style="margin-top:8px;max-height:220px"></div>
+    <div id="hackTableWrap" style="margin-top:8px;overflow:auto"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:140px;font-size:12px" onclick="exportSuspiciousJSON()">📥 Export suspicious JSON</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:140px;font-size:12px" onclick="copySuspiciousDeviceIds()">📋 Copy device_id nghi ngờ</button>
+    </div>
+    <p style="font-size:11px;color:#a8a29e;margin-top:8px">Phân tích trên <code>data</code> đã gộp (bc+du). CRITICAL: SĐT trùng / IP≥5 cùng STT. WARN: UA chùm / burst. <code>voter_ip</code> nhiều <code>null</code> do timeout ipify — IP null bỏ qua.</p>
+  </div>
+</div>
 <div class="card" style="max-width:520px">
   <div class="head" style="background:linear-gradient(135deg,#059669,#34d399)"><h1>🔗 Link tự xóa cho khán giả</h1><p style="font-size:12px;opacity:.9">Gửi link — họ mở là tự xóa và nhập lại được</p></div>
   <div class="body" style="text-align:left">
@@ -298,6 +318,168 @@ async function copyTop3(){
   const csvLog=document.getElementById('csvLog'); if(csvLog) csvLog.textContent+=`📋 Đã copy Top 3\n`;
   log(`🏆 Đã copy Top 3 (thực tế ${actualTotal}): ${top3.map(x=>x._pred).join(', ')}`);
   alert('Đã copy Top 3 vào clipboard!');
+}
+let suspiciousGlobal=null;
+function analyzeHackData(bc, du, ipThresh=5){
+  const ipMap=new Map(), sdtMap=new Map(), uaMap=new Map();
+  bc.forEach(r=>{
+    if(r.voter_ip){ const k=r.voter_ip.trim(); if(!ipMap.has(k)) ipMap.set(k,[]); ipMap.get(k).push(r); }
+    if(r.sdt){ const s=String(r.sdt).trim(); if(!sdtMap.has(s)) sdtMap.set(s,[]); sdtMap.get(s).push(r); }
+    const ua=(r.user_agent||'').trim()||'__EMPTY__'; if(!uaMap.has(ua)) uaMap.set(ua,[]); uaMap.get(ua).push(r);
+  });
+  du.forEach(r=>{
+    if(r.sdt){ const s=String(r.sdt).trim(); if(!sdtMap.has(s)) sdtMap.set(s,[]); sdtMap.get(s).push({...r,_isDu:true}); }
+  });
+  // burst: sort bc by time
+  const bcSorted=[...bc].sort((a,b)=> parseSupabaseTime(a.created_at)-parseSupabaseTime(b.created_at));
+  // sliding window 60s
+  const bursts=[];
+  for(let i=0;i<bcSorted.length;i++){
+    const start=parseSupabaseTime(bcSorted[i].created_at);
+    let j=i; while(j<bcSorted.length && parseSupabaseTime(bcSorted[j].created_at)-start <= 60000) j++;
+    const cnt=j-i; if(cnt>=10) bursts.push({start:bcSorted[i].created_at, end:bcSorted[j-1].created_at, count:cnt, stt:bcSorted[i].stt});
+  }
+  const suspicious=[];
+  const add=(r, reason, level)=>{
+    const key=r.device_id||r.sdt||Math.random();
+    let found=suspicious.find(x=>x.device_id===r.device_id);
+    if(found){ found.reasons.push(reason); if(level==='CRITICAL') found.level='CRITICAL'; }
+    else suspicious.push({device_id:r.device_id, sdt:r.sdt||'', ho_ten:(r.ho_ten||r.ten||'').trim(), thon:(r.thon||'').trim(), stt:r.stt||r.stt_du_doan||'', voter_ip:r.voter_ip||'', user_agent:(r.user_agent||'').substring(0,80), created_at:r.created_at, created_at_vn:toVN(r.created_at), level, reasons:[reason]});
+  };
+  // IP >= thresh
+  ipMap.forEach((arr,ip)=>{
+    if(ip==='__EMPTY__' || !ip) return;
+    if(arr.length >= ipThresh){
+      const stts=[...new Set(arr.map(x=>x.stt))];
+      const level=arr.length>=10?'CRITICAL':'WARN';
+      arr.forEach(r=> add(r, `IP ${ip} có ${arr.length} phiếu (STT ${stts.slice(0,3).join(',')})`, level));
+    }
+    // IP burst: same IP 5 phiếu trong 5 phút
+    const sorted=[...arr].sort((a,b)=> parseSupabaseTime(a.created_at)-parseSupabaseTime(b.created_at));
+    for(let i=0;i<sorted.length;i++){
+      const sT=parseSupabaseTime(sorted[i].created_at); let j=i; while(j<sorted.length && parseSupabaseTime(sorted[j].created_at)-sT <= 300000) j++;
+      if(j-i>=5) { for(let k=i;k<j;k++) add(sorted[k], `IP burst ${j-i} phiếu/5 phút`, 'WARN'); break; }
+    }
+  });
+  // SĐT trùng
+  sdtMap.forEach((arr,sdt)=>{
+    if(arr.length>=2){
+      const devs=[...new Set(arr.map(x=>x.device_id))];
+      if(devs.length>=2) arr.forEach(r=> add(r, `SĐT ${sdt} trùng ${arr.length} phiếu / ${devs.length} device`, 'CRITICAL'));
+    }
+  });
+  // UA chùm >=15
+  uaMap.forEach((arr,ua)=>{
+    if(ua==='__EMPTY__') { if(arr.length>=5) arr.forEach(r=> add(r, `UA trống ${arr.length} phiếu`, 'WARN')); return; }
+    if(arr.length>=15) arr.forEach(r=> add(r, `UA trùng "${ua.substring(0,30)}..." ${arr.length} phiếu`, 'WARN'));
+  });
+  // burst toàn hệ thống
+  bursts.forEach(b=>{ bcSorted.slice(0,1).forEach(r=>{}); /* log */ });
+  if(bursts.length){
+    // gắn WARN cho các phiếu trong burst đầu tiên
+    const b=bursts[0];
+    bcSorted.filter(r=>{ const t=parseSupabaseTime(r.created_at); return t>=parseSupabaseTime(b.start) && t<=parseSupabaseTime(b.end); }).forEach(r=> add(r, `Burst hệ thống ${b.count} phiếu/60s lúc ${toVN(b.start)}`, 'WARN'));
+  }
+  // STT tập trung >50%
+  if(bc.length){
+    const cntMap={}; bc.forEach(r=> cntMap[r.stt]=(cntMap[r.stt]||0)+1);
+    const maxStt=Object.entries(cntMap).sort((a,b)=>b[1]-a[1])[0];
+    if(maxStt && maxStt[1]/bc.length>0.5){
+      bc.filter(r=>String(r.stt)===String(maxStt[0])).forEach(r=> add(r, `STT ${maxStt[0]} chiếm ${Math.round(maxStt[1]/bc.length*100)}% (${maxStt[1]}/${bc.length})`, 'WARN'));
+    }
+  }
+  // dedup & sort
+  const uniq=new Map(); suspicious.forEach(s=> uniq.set(s.device_id, s));
+  const out=[...uniq.values()].sort((a,b)=> (a.level==='CRITICAL'?0:1)-(b.level==='CRITICAL'?0:1) || parseSupabaseTime(a.created_at)-parseSupabaseTime(b.created_at));
+  return {suspicious:out, ipMap, sdtMap, uaMap, bursts, totalBc:bc.length, totalDu:du.length};
+}
+async function analyzeHackLive(){
+  const ipThresh=parseInt(document.getElementById('hackIpThresh')?.value||'5',10)||5;
+  const stat=document.getElementById('hackStat'), clog=document.getElementById('hackLog'), wrap=document.getElementById('hackTableWrap');
+  if(stat) stat.textContent='⏳ Đang tải...';
+  if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang phân tích live...\n'; }
+  if(wrap) wrap.innerHTML='';
+  const data=await fetchAllAudience(); if(!data) return;
+  const {bc, du}=data;
+  const res=analyzeHackData(bc, du, ipThresh);
+  suspiciousGlobal=res;
+  if(clog) clog.textContent+=`Đã phân tích ${bc.length} phiếu, ${du.length} đoán — phát hiện ${res.suspicious.length} device nghi ngờ\n`;
+  if(stat) stat.textContent=`${res.suspicious.length} nghi ngờ / ${bc.length} phiếu`;
+  renderHackTable(res);
+  log(`🔍 Phân tích hack live: ${res.suspicious.length} nghi ngờ (IP≥${ipThresh}, SĐT trùng, UA) trên ${bc.length} phiếu`);
+}
+async function analyzeHackFile(input){
+  const file=input.files?.[0]; if(!file) return;
+  const stat=document.getElementById('hackStat'), clog=document.getElementById('hackLog'), wrap=document.getElementById('hackTableWrap');
+  if(stat) stat.textContent='⏳ Đang đọc file...';
+  if(clog){ clog.style.display='block'; clog.textContent=`⏳ Đang đọc ${file.name} (${Math.round(file.size/1024)}KB)...\n`; }
+  try{
+    const text=await file.text();
+    const json=JSON.parse(text);
+    let bc=[], du=[];
+    if(json.data && Array.isArray(json.data)){
+      // khan_gia_...json dạng gộp
+      json.data.forEach(d=>{
+        if(d.binh_chon) bc.push({device_id:d.device_id, sdt:d.sdt, ho_ten:d.ho_ten, thon:d.thon, stt:d.binh_chon.stt, voter_ip:d.binh_chon.voter_ip, user_agent:d.binh_chon.user_agent, created_at:d.binh_chon.created_at_utc||d.binh_chon.created_at});
+        if(d.du_doan) du.push({device_id:d.device_id, sdt:d.sdt, ho_ten:d.ho_ten, thon:d.thon, stt_du_doan:d.du_doan.tong, tong_du_doan:d.du_doan.tong, created_at:d.du_doan.created_at_utc||d.du_doan.created_at});
+      });
+    } else if(json.data && json.total!==undefined){
+      // split file
+      bc=json.data;
+    } else if(Array.isArray(json)){
+      bc=json;
+    } else {
+      throw new Error('JSON không đúng dạng khan_gia_...device.json');
+    }
+    const ipThresh=parseInt(document.getElementById('hackIpThresh')?.value||'5',10)||5;
+    const res=analyzeHackData(bc, du, ipThresh);
+    suspiciousGlobal=res;
+    if(clog) clog.textContent+=`Đã đọc ${bc.length} phiếu từ file — phát hiện ${res.suspicious.length} nghi ngờ\n`;
+    if(stat) stat.textContent=`${res.suspicious.length} nghi ngờ / ${bc.length} phiếu (file)`;
+    renderHackTable(res);
+    log(`🔍 Phân tích file ${file.name}: ${res.suspicious.length} nghi ngờ`);
+  }catch(e){
+    if(clog) clog.textContent+='❌ '+e.message;
+    if(stat) stat.textContent='❌ lỗi';
+  }
+  input.value='';
+}
+function renderHackTable(res){
+  const wrap=document.getElementById('hackTableWrap'); if(!wrap) return;
+  if(!res.suspicious.length){
+    wrap.innerHTML=`<div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;text-align:center;color:#166534">✅ Không phát hiện hack theo ngưỡng IP≥${document.getElementById('hackIpThresh')?.value||5} (đã kiểm tra SĐT trùng, UA, burst)</div>`;
+    return;
+  }
+  let html=`<div style="background:#fff;border:1px solid #fecaca;border-radius:10px;overflow:hidden"><div style="padding:10px 12px;background:#fef2f2;color:#991b1b;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>⚠️ ${res.suspicious.length} device nghi ngờ</span><span style="font-size:11px;color:#7f1d1d">${res.totalBc} phiếu · ${res.totalDu} đoán</span></div><div style="max-height:420px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px"><thead><tr style="background:#fef2f2;color:#7f1d1d"><th style="padding:6px 8px;text-align:left">Mức</th><th style="padding:6px 8px;text-align:left">SĐT / Họ tên</th><th style="padding:6px 8px;text-align:left">Thôn / STT</th><th style="padding:6px 8px;text-align:left">IP</th><th style="padding:6px 8px;text-align:left">Thời gian VN</th><th style="padding:6px 8px;text-align:left">Lý do</th><th style="padding:6px 8px">Chọn</th></tr></thead><tbody>`;
+  res.suspicious.slice(0,200).forEach(s=>{
+    const levelBadge=s.level==='CRITICAL'?'<span style="background:#dc2626;color:#fff;padding:2px 6px;border-radius:8px;font-size:11px">CRITICAL</span>':'<span style="background:#f59e0b;color:#fff;padding:2px 6px;border-radius:8px;font-size:11px">WARN</span>';
+    const sdtMask=s.sdt? String(s.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
+    html+=`<tr style="border-top:1px solid #ffe4e6"><td style="padding:6px 8px">${levelBadge}</td><td style="padding:6px 8px"><b>${sdtMask}</b><br><span style="color:#475569">${(s.ho_ten||'').substring(0,20)}</span></td><td style="padding:6px 8px">${(s.thon||'').substring(0,16)}<br><b>STT ${s.stt||'-'}</b></td><td style="padding:6px 8px;font-family:monospace">${s.voter_ip||'null'}</td><td style="padding:6px 8px;white-space:nowrap">${s.created_at_vn||''}</td><td style="padding:6px 8px;max-width:220px;word-break:break-word">${s.reasons.join('<br>')}</td><td style="padding:6px 8px;text-align:center"><input type="checkbox" value="${s.device_id}" class="hackChk" checked></td></tr>`;
+  });
+  html+=`</tbody></table></div><div style="padding:8px 12px;background:#fffbeb;color:#92400e;font-size:11px;text-align:center">Hiển thị 200/${res.suspicious.length} • Tick để chọn xóa hàng loạt ở dưới (dùng với Nút Reset đã chọn)</div></div>`;
+  wrap.innerHTML=html;
+}
+function exportSuspiciousJSON(){
+  if(!suspiciousGlobal || !suspiciousGlobal.suspicious.length){ alert('Chưa có kết quả phân tích — bấm Phân tích trước'); return; }
+  const out={exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', ip_thresh:parseInt(document.getElementById('hackIpThresh')?.value||'5',10), total_suspicious:suspiciousGlobal.suspicious.length, total_bc:suspiciousGlobal.totalBc, data:suspiciousGlobal.suspicious};
+  downloadJSON(`suspicious_IP${out.ip_thresh}_${new Date().toISOString().slice(0,10)}_${out.total_suspicious}.json`, out);
+  log(`📥 Đã xuất suspicious JSON: ${out.total_suspicious} device`);
+}
+function copySuspiciousDeviceIds(){
+  if(!suspiciousGlobal || !suspiciousGlobal.suspicious.length){ alert('Chưa có kết quả'); return; }
+  const ids=[...document.querySelectorAll('.hackChk:checked')].map(c=>c.value);
+  if(!ids.length) ids=suspiciousGlobal.suspicious.map(s=>s.device_id);
+  const txt=ids.join(',');
+  navigator.clipboard.writeText(txt).then(()=> alert(`Đã copy ${ids.length} device_id`)).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert(`Đã copy ${ids.length} device_id`);
+  });
+  // auto tick vào danh sách reset nếu có
+  const list=document.getElementById('deviceList');
+  if(list){
+    const chks=[...list.querySelectorAll('input[type=checkbox]')];
+    let matched=0; ids.forEach(id=>{ const el=chks.find(c=>c.value===id); if(el){ el.checked=true; matched++; } });
+    if(matched) log(`Đã tick ${matched}/${ids.length} device nghi ngờ vào danh sách Reset đã chọn`);
+  }
 }
 function log(m){const el=document.getElementById('log');el.style.display='block';el.textContent+=m+"\n"}
 function openResetDeviceModal(){ document.getElementById('resetPw').value=''; document.getElementById('resetPw').classList.remove('err'); document.getElementById('resetModal').classList.add('open'); setTimeout(()=>document.getElementById('resetPw').focus(),100); }

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kết quả Top 3 — Trung thu 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#fffbeb;background-image:radial-gradient(#fde68a 1px,transparent 1px);background-size:22px 22px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px;color:#422006}
+.card{background:#fff;border:1px solid #fde68a;border-radius:14px;max-width:560px;width:100%;overflow:hidden;box-shadow:0 8px 28px rgba(127,29,29,.1)}
+.head{padding:26px 20px 20px;text-align:center;background:linear-gradient(135deg,#7f1d1d,#b45309);color:#fff;position:relative;overflow:hidden}
+.head h1{font-size:22px;font-weight:800;position:relative}
+.moon{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fefce8,#fde68a 55%,#f59e0b);box-shadow:0 0 24px rgba(253,230,138,.8);position:relative}
+.divider{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:12px;opacity:.9}
+.divider::before,.divider::after{content:'';height:1px;width:64px;background:rgba(253,230,138,.7)}
+.head p{font-size:12px;opacity:.9;margin-top:4px}
+.body{padding:20px}
+.count{font-size:34px;font-weight:800;color:#7f1d1d;text-align:center;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.count-sub{text-align:center;font-size:13px;color:#78716c;margin-top:6px}
+.row{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #fde68a;border-radius:10px;margin-top:10px;background:#fffdf5}
+.rank{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;background:#b45309}
+.row:nth-child(1) .rank{background:#b45309}.row:nth-child(2) .rank{background:#78716c}.row:nth-child(3) .rank{background:#92400e}
+.row.top1{border:2px solid #f59e0b;background:#fffbeb;box-shadow:0 4px 16px rgba(180,83,9,.18)}
+.row.top1 .n{font-size:16px}
+.prize{font-size:11px;font-weight:800;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:20px;padding:2px 10px;display:inline-block;margin-top:4px}
+.info{flex:1;min-width:0}
+.info .n{font-weight:800;font-size:14px;color:#7f1d1d}
+.info .m{font-size:12px;color:#78716c;margin-top:2px}
+.nums{text-align:right;flex-shrink:0;font-size:12px;color:#57534e;line-height:1.5}
+.nums b{color:#7f1d1d;font-size:15px}
+.total{text-align:center;font-size:13px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:10px;margin-top:12px}
+.err{text-align:center;font-size:13px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px;margin-top:12px;display:none}
+.cfg{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.cfg input{flex:1;min-width:140px;padding:9px 10px;border:1px solid #fde68a;border-radius:8px;font-size:12px}
+.cfg button{padding:9px 14px;border-radius:8px;border:none;background:#7f1d1d;color:#fff;font-weight:700;cursor:pointer;font-size:12px}
+.foot{text-align:center;font-size:11px;color:#a8a29e;margin-top:12px}
+button.retry{margin:12px auto 0;display:none;padding:10px 18px;border-radius:8px;border:1px solid #fde68a;background:#fffbeb;color:#92400e;font-weight:700;cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head"><div class="moon"></div><h1>Kết quả dự đoán Top 3</h1><div class="divider">Trung thu 2026 — công bố lúc 19:30</div></div>
+  <div class="body">
+    <div id="wait">
+      <div class="count" id="count">--:--:--</div>
+      <div class="count-sub" id="countSub">Kết quả sẽ hiển thị đúng 19:30 tối nay (19/09/2026)</div>
+    </div>
+    <div id="result" style="display:none">
+      <div class="total" id="total">Đang tải…</div>
+      <div id="list"></div>
+      <div class="err" id="err"></div>
+      <button class="retry" id="retry" onclick="load(true)">Tải lại</button>
+      <div class="cfg" id="cfg" style="display:none">
+        <input id="cfgUrl" placeholder="Supabase URL">
+        <input id="cfgKey" placeholder="Anon key">
+        <button onclick="saveCfg()">Lưu</button>
+      </div>
+    </div>
+    <div class="foot">Xếp theo |dự đoán − tổng thực tế|, trùng số thì gửi sớm thắng · Giờ VN</div>
+  </div>
+</div>
+<script>
+var SHOW_AT = new Date('2026-09-19T19:30:00+07:00').getTime();
+var qs = new URLSearchParams(location.search);
+var FORCE = qs.has('show') || qs.has('open') || qs.has('test');
+function getCfg(){ try{ var c=JSON.parse(localStorage.getItem('cd2026_config')||'null'); if(c&&c.url&&c.key) return c; }catch(e){} return null; }
+function saveCfg(){ var u=document.getElementById('cfgUrl').value.trim(), k=document.getElementById('cfgKey').value.trim(); if(!u||!k){alert('Nhập đủ URL + key');return;} try{localStorage.setItem('cd2026_config',JSON.stringify({url:u.replace(/\/$/,''),key:k}));}catch(e){} document.getElementById('cfg').style.display='none'; load(true); }
+function mask(s){ s=String(s||''); return s.length<5?'—':s.replace(/(\d{3})\d+(\d{2})$/,'$1****$2'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function tick(){
+  if(FORCE || Date.now()>=SHOW_AT){ document.getElementById('wait').style.display='none'; document.getElementById('result').style.display='block'; load(false); return; }
+  var d = SHOW_AT - Date.now();
+  var h=Math.floor(d/3600000), m=Math.floor(d%3600000/60000), s=Math.floor(d%60000/1000);
+  document.getElementById('count').textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  setTimeout(tick,1000);
+}
+var _loading=false;
+async function load(retry){
+  if(_loading&&!retry) return; _loading=true;
+  var cfg=getCfg();
+  if(!cfg){ document.getElementById('total').textContent='Chưa có cấu hình Supabase trên máy này.'; document.getElementById('cfg').style.display='flex'; _loading=false; return; }
+  document.getElementById('total').textContent='Đang tải…';
+  document.getElementById('err').style.display='none'; document.getElementById('retry').style.display='none';
+  try{
+    var H={apikey:cfg.key,Authorization:'Bearer '+cfg.key};
+    var rc=await fetch(cfg.url+'/rest/v1/binh_chon_khan_gia?select=device_id&limit=1',{headers:Object.assign({Prefer:'count=exact'},H)});
+    if(!rc.ok) throw new Error('binh_chon '+rc.status);
+    var cr=rc.headers.get('content-range')||'', mt=cr.match(/\/(\d+)/), total=mt?parseInt(mt[1],10):(await rc.json()).length;
+    var all=[], off=0;
+    for(var p=0;p<20;p++){
+      var t='du_doan', u=cfg.url+'/rest/v1/'+t+'?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at&order=created_at.asc&limit=1000&offset='+off;
+      var r=await fetch(u,{headers:H});
+      if(!r.ok&&t==='du_doan'){ r=await fetch(cfg.url+'/rest/v1/v_du_doan_public?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at&order=created_at.asc&limit=1000&offset='+off,{headers:H}); }
+      if(!r.ok) throw new Error('du_doan '+r.status);
+      var rows=await r.json(); all=all.concat(rows);
+      if(rows.length<1000) break; off+=1000;
+    }
+    var list=all.map(function(x){ var raw=(x.tong_du_doan!=null?x.tong_du_doan:x.stt_du_doan); var pr=parseInt(raw,10); if(isNaN(pr)) pr=0; return {n:(x.ho_ten||x.ten||'—').trim(), th:(x.thon||'—').trim(), s:x.sdt||'', p:pr, d:Math.abs(pr-total), t:x.created_at}; });
+    list.sort(function(a,b){ return a.d-b.d || new Date(a.t)-new Date(b.t); });
+    var top=list.slice(0,3), labels=['1','2','3'];
+    document.getElementById('total').innerHTML='Tổng lượt bình chọn thực tế: <b>'+total+'</b> · '+all.length+' lượt dự đoán';
+    document.getElementById('list').innerHTML = top.length ? top.map(function(x,i){
+      var cls=i===0?'row top1':'row'; var pz=i===0?'Giải Nhất':(i===1?'Giải Nhì':'Giải Ba');
+      return '<div class="'+cls+'"><div class="rank">'+labels[i]+'</div><div class="info"><div class="n">'+esc(x.n)+'</div><span class="prize">'+pz+'</span><div class="m">'+esc(x.th)+' · '+esc(x.s||'—')+'</div></div><div class="nums">Dự đoán <b>'+x.p+'</b><br>Chênh lệch '+x.d+'</div></div>';
+    }).join('') : '<div class="total">Chưa có dự đoán</div>';
+  }catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='Lỗi tải: '+e.message; document.getElementById('retry').style.display='block'; document.getElementById('total').textContent='Chưa tải được kết quả.'; }
+  _loading=false;
+}
+tick();
+</script>
+</body>
+</html>
