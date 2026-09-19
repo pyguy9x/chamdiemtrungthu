@@ -41,9 +41,7 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
 <div class="card">
   <div class="head"><h1>🔍 Phát hiện Hack Bình chọn</h1><p>IP ≥5, SĐT trùng, UA chùm, burst — 27 linh vật</p></div>
   <div class="body" style="text-align:left">
-    <div style="margin-bottom:10px;text-align:center">
-      <input id="pw" type="password" style="max-width:220px">
-    </div>
+    <input id="pw" type="hidden" value="">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-weight:800" onclick="analyzeHackLive()">🔍 Phân tích live từ Supabase</button>
       <label class="btn btn-ghost" style="flex:1;min-width:160px;cursor:pointer;text-align:center">📂 Chọn file JSON<input type="file" id="hackFileInput" accept=".json" style="display:none" onchange="analyzeHackFile(this)"></label>
@@ -188,8 +186,7 @@ async function fetchPaginated(table, select, clog){
   return {rows: all, total: total!=null?total:all.length};
 }
 async function fetchAllAudience(){
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='TT2026'){ alert('Nhập mã TT2026 ở ô trên'); document.getElementById('pw').focus(); return null; }
+  // bỏ kiểm tra mật khẩu
   const clog=document.getElementById('hackLog');
   if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang tải (pagination 1000)...\n'; }
   const bcSelect='device_id,sdt,ho_ten,thon,ten,stt,voter_ip,user_agent,created_at';
@@ -569,8 +566,7 @@ async function updateValidCountsToSupabase(){
     alert('Chưa có kết quả phân tích — bấm “Phân tích live” hoặc chọn file trước');
     return;
   }
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='TT2026'){ alert('Nhập mã TT2026 ở ô trên'); document.getElementById('pw').focus(); return; }
+  // bỏ kiểm tra mật khẩu
   const ipThresh=parseInt(document.getElementById('hackIpThresh')?.value||'5',10)||5;
   const clog=document.getElementById('hackLog');
   // Lấy full bc mới nhất để tính hợp lệ chính xác
@@ -632,8 +628,7 @@ async function updateValidCountsToSupabase(){
 }
 let validVotesCache=null;
 async function showValidVotesPopup(){
-  const pw=document.getElementById('pw').value.trim();
-  if(!pw){ alert('Nhập mã TT2026 ở ô trên'); document.getElementById('pw').focus(); return; }
+  // bỏ kiểm tra mật khẩu
   const clog=document.getElementById('hackLog');
   if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang tải bình chọn hợp lệ...\n'; }
   const data=await fetchAllAudience(); if(!data) return;
@@ -695,8 +690,7 @@ function exportValidVotesJSON(){
   downloadJSON(`valid_votes_200_${new Date().toISOString().slice(0,10)}.json`, out);
 }
 async function loadDevices(){
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='TT2026'){ alert('Nhập mã TT2026'); document.getElementById('pw').focus(); return; }
+  // bỏ kiểm tra mật khẩu
   const list=document.getElementById('deviceList');
   list.innerHTML='<div style="padding:20px;text-align:center;color:#a8a29e">⏳ Đang tải...</div>';
   try{
@@ -719,8 +713,7 @@ async function loadDevices(){
   }catch(e){ list.innerHTML=`<div style="padding:12px;color:#dc2626">❌ ${e.message}</div>`; }
 }
 async function doResetSelected(clearLocal){
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='TT2026'){ alert('Nhập mã'); return; }
+  // bỏ kiểm tra mật khẩu
   const checked=[...document.querySelectorAll('#deviceList input[type=checkbox]:checked')].map(c=>c.value);
   if(!checked.length){ alert('Chưa chọn'); return; }
   if(!confirm(`Xóa ${checked.length} thiết bị?`)) return;

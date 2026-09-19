@@ -36,9 +36,7 @@ input[type=password], input[type=number]{padding:8px;border:1px solid #fde68a;bo
 <div class="card">
   <div class="head"><h1>📊 Kết quả Phiếu Hợp lệ — 27 linh vật</h1><p>Phân tích hack → 27 đơn vị hiện tại vs hợp lệ → ghi Supabase → chi tiết IP/SĐT</p></div>
   <div class="body" style="text-align:left">
-    <div style="margin-bottom:10px;text-align:center">
-      <input id="pw" type="password" style="max-width:220px" placeholder="Mã TT2026">
-    </div>
+    <input id="pw" type="hidden" value="">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:800" onclick="analyzeAndShowConfirm()">🔍 Phân tích — hiện 27 đơn vị</button>
       <label class="btn btn-ghost" style="flex:1;min-width:160px;cursor:pointer;text-align:center">📂 Chọn file JSON<input type="file" id="fileInput" accept=".json" style="display:none" onchange="analyzeFile(this)"></label>
@@ -154,8 +152,7 @@ async function fetchPaginated(table, select, clog){
   return {rows: all, total: total!=null?total:all.length};
 }
 async function fetchAllAudience(){
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='TT2026'){ alert('Nhập mã TT2026'); document.getElementById('pw').focus(); return null; }
+  // bỏ kiểm tra mật khẩu
   const clog=document.getElementById('log');
   if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang tải (pagination 1000)...\n'; }
   const bcSelect='device_id,sdt,ho_ten,thon,ten,stt,voter_ip,user_agent,created_at';
@@ -233,8 +230,7 @@ async function analyzeAndShowConfirm(){
 function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('open'); }
 async function confirmUpdate(){
   if(!lastSuspicious || !lastBc){ alert('Chưa phân tích'); return; }
-  const pw=document.getElementById('pw').value.trim();
-  if(pw!=='TT2026'){ alert('Nhập mã TT2026'); return; }
+  // bỏ kiểm tra mật khẩu
   if(!confirm(`Xác nhận ghi ${lastValid.length} phiếu hợp lệ vào Supabase?\nSẽ XÓA ${lastSuspicious.suspicious.length} phiếu hack vĩnh viễn!`)) return;
   if(!confirm(`Chắc chắn xóa ${lastSuspicious.suspicious.length} dòng hack?`)) return;
   const ids=[...new Set(lastSuspicious.suspicious.map(s=>s.device_id))];
