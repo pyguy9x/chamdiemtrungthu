@@ -308,7 +308,7 @@ const MODELS=[
 {stt:19,name:"Thỏ Ngọc trông trăng",unit:"Thôn Mậu A 3",img:"https://i.ibb.co/YFg99sNy/Th-n-M-u-A-3.webp"},
 {stt:20,name:"Mái chùa đón trăng",unit:"Trường THCS Mậu A 2",img:"https://i.ibb.co/sprHrTyR/Tr-ng-THCS-M-u-A-2.webp"},
 {stt:21,name:"Đèn ông sao và đèn kéo quân",unit:"Trường THPH Chu Văn An",img:"https://i.ibb.co/chvpkYc5/Tr-ng-Chu-V-n-An.jpg"},
-{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Mầm non Mậu A1",img:"https://i.ibb.co/nNTYT4nG/Th-n-M-u-A-1.webp"},
+{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Thôn Mậu A1",img:"https://i.ibb.co/nNTYT4nG/Th-n-M-u-A-1.webp"},
 {stt:23,name:"Ngôi Sao",unit:"Thôn Mậu A 2",img:"https://i.ibb.co/bj4zx14y/Th-n-M-u-A-2.webp"},
 {stt:24,name:"Cá Chép",unit:"Thôn Mậu Đông 2",img:"https://i.ibb.co/nNYJxL6B/Th-n-M-u-ng-2.webp"},
 {stt:25,name:"Trăng thu đất việt",unit:"Trường Mầm Non Ban Mai",img:"https://i.ibb.co/JRdsfc9w/Tr-ng-M-m-Non-Ban-Mai.webp"},
@@ -985,27 +985,32 @@ async function buildDuDoanUI(){
       if(r2.ok){ const rows2=await r2.json(); actualTotal=rows2.length; }
     }
   }catch(e){}
-  // lấy danh sách dự đoán
+  // lấy danh sách dự đoán — pagination để không sót (>1000) và luôn mới nhất
   let rows=[];
-  try{
-    let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(r.ok) rows=await r.json();
-    // fallback nếu view thiếu cột tong_du_doan nhưng bảng có
-    if(rows.length && rows[0].tong_du_doan===undefined){
-      try{
-        const r3=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-        if(r3.ok) rows=await r3.json();
-      }catch(e){}
+  async function fetchAllDuDoanIdx(){
+    const tryFetch=async (table, select)=>{
+      let all=[]; for(let off=0; off<20000; off+=1000){
+        const r=await fetch(`${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=created_at.asc&limit=1000&offset=${off}`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+        if(!r.ok) return null; const chunk=await r.json(); if(!chunk.length) break; all=all.concat(chunk); if(chunk.length<1000) break;
+      } return all;
+    };
+    let all=await tryFetch('v_du_doan_public','*');
+    if(all===null) all=await tryFetch('du_doan','device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at')||[];
+    if(all.length && all[0].tong_du_doan===undefined){
+      const all2=await tryFetch('du_doan','device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at');
+      if(all2 && all2.length) all=all2;
     }
-  }catch(e){}
+    return all||[];
+  }
+  try{ rows=await fetchAllDuDoanIdx(); }catch(e){ rows=[]; }
   let list=rows.map(r=>{
     const raw = r.tong_du_doan!=null? r.tong_du_doan : r.stt_du_doan;
     const pred = parseInt(raw);
     const diff = Math.abs((isNaN(pred)?0:pred) - actualTotal);
     return {...r, _pred: isNaN(pred)?0:pred, _diff: diff };
   });
-  list.sort((a,b)=> a._diff - b._diff || new Date(a.created_at) - new Date(b.created_at));
+  const _parseIdx=s=>{ let t=String(s).trim().replace(' ','T'); t=t.replace(/([+-]\d{2})$/, '$1:00').replace(/([+-]\d{2})(\d{2})$/, '$1:$2'); if(!/[Z]$/.test(t) && !/[+-]\d{2}:\d{2}$/.test(t)) t+='Z'; const d=new Date(t); return isNaN(d)? new Date(s): d; };
+  list.sort((a,b)=> a._diff - b._diff || _parseIdx(a.created_at) - _parseIdx(b.created_at));
   let banner='';
   if(doneVal!==null && !isNaN(doneVal)){
     banner=`<div class="vote-banner locked">✅ Bạn đã dự đoán: <b>${doneVal} người</b> — 1 ĐT chỉ 1 lần • Kết quả sẽ công bố sau khi kết thúc bình chọn</div>`;
@@ -1049,7 +1054,7 @@ async function buildDuDoanUI(){
       const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
       const ten=(x.ho_ten||x.ten||'—').trim();
       const thon=(x.thon||'').trim()||'—';
-      const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const s=(()=>{ let t=String(x.created_at).trim().replace(' ','T'); t=t.replace(/([+-]\d{2})$/, '$1:00').replace(/([+-]\d{2})(\d{2})$/, '$1:$2'); if(!/[Z]$/.test(t) && !/[+-]\d{2}:\d{2}$/.test(t)) t+='Z'; const d=new Date(t); return isNaN(d)? String(x.created_at): d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Ho_Chi_Minh',hour12:false}); })();
       const rowBg= rank===1?'background:linear-gradient(90deg,#fff8e1,#ffecb3)': (i%2===0?'background:#fff':'background:#f8fafc');
       resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${badge}</td><td style="padding:8px 10px;font-weight:600;max-width:140px;word-break:break-word">${ten}</td><td style="padding:8px 10px;max-width:120px;word-break:break-word">${thon}</td><td style="padding:8px 10px;white-space:nowrap;font-weight:600">${sdtMask}</td><td style="padding:8px 10px;text-align:center;font-weight:800">${x._pred}</td><td style="padding:8px 10px;text-align:center;color:${x._diff===0?'#2e7d32':'#5b21b6'};font-weight:700">${x._diff}</td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
     });

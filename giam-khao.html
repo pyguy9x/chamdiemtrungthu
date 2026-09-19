@@ -286,7 +286,7 @@ const MODELS=[
 {stt:19,name:"Thỏ Ngọc trông trăng",unit:"Thôn Mậu A 3"},
 {stt:20,name:"Mái chùa đón trăng",unit:"Trường THCS Mậu A 2"},
 {stt:21,name:"Đèn ông sao và đèn kéo quân",unit:"Trường THPH Chu Văn An"},
-{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Mầm non Mậu A1"},
+{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Thôn Mậu A1"},
 {stt:23,name:"Ngôi Sao",unit:"Thôn Mậu A 2"},
 {stt:24,name:"Cá Chép",unit:"Thôn Mậu Đông 2"},
 {stt:25,name:"Trăng thu đất việt",unit:"Trường Mầm Non Ban Mai"},
@@ -918,6 +918,8 @@ function showVoteStatus(msg,type){
 const DUDOAN_DONE_KEY='da_du_doan';
 const SDT_STORAGE_KEY='saved_sdt';
 let pendingDuDoan=null;
+function parseSupabaseTime(s){ if(!s) return null; let t=String(s).trim().replace(' ','T'); t=t.replace(/([+-]\d{2})$/, '$1:00').replace(/([+-]\d{2})(\d{2})$/, '$1:$2'); if(!/[Z]$/.test(t) && !/[+-]\d{2}:\d{2}$/.test(t)) t+='Z'; const d=new Date(t); return isNaN(d)? new Date(s): d; }
+function formatVNTime(s){ const d=parseSupabaseTime(s); if(!d||isNaN(d)) return String(s||''); try{ return d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Ho_Chi_Minh',hour12:false}); }catch(e){ return d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}); } }
 function isValidSdt(s){ return /^0\d{9,10}$/.test(String(s).trim()); }
 function resetSdtInput(){
   const el=document.getElementById('voteSdtInput');
@@ -987,27 +989,31 @@ async function buildDuDoanUI(){
       if(r2.ok){ const rows2=await r2.json(); actualTotal=rows2.length; }
     }
   }catch(e){}
-  // lấy danh sách dự đoán
+  // lấy danh sách dự đoán — pagination để không sót (>1000) và luôn mới nhất
   let rows=[];
-  try{
-    let r=await fetch(`${config.url}/rest/v1/v_du_doan_public?select=*&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(!r.ok) r=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-    if(r.ok) rows=await r.json();
-    // fallback nếu view thiếu cột tong_du_doan nhưng bảng có
-    if(rows.length && rows[0].tong_du_doan===undefined){
-      try{
-        const r3=await fetch(`${config.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at&order=created_at.asc&limit=1000`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
-        if(r3.ok) rows=await r3.json();
-      }catch(e){}
+  async function fetchAllDuDoan(){
+    const tryFetch=async (table, select)=>{
+      let all=[]; for(let off=0; off<20000; off+=1000){
+        const r=await fetch(`${config.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=created_at.asc&limit=1000&offset=${off}`,{headers:{apikey:config.key,Authorization:`Bearer ${config.key}`}});
+        if(!r.ok) return null; const chunk=await r.json(); if(!chunk.length) break; all=all.concat(chunk); if(chunk.length<1000) break;
+      } return all;
+    };
+    let all=await tryFetch('v_du_doan_public','*');
+    if(all===null) all=await tryFetch('du_doan','device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at')||[];
+    if(all.length && all[0].tong_du_doan===undefined){
+      const all2=await tryFetch('du_doan','device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at');
+      if(all2 && all2.length) all=all2;
     }
-  }catch(e){}
+    return all||[];
+  }
+  try{ rows=await fetchAllDuDoan(); }catch(e){ rows=[]; }
   let list=rows.map(r=>{
     const raw = r.tong_du_doan!=null? r.tong_du_doan : r.stt_du_doan;
     const pred = parseInt(raw);
     const diff = Math.abs((isNaN(pred)?0:pred) - actualTotal);
     return {...r, _pred: isNaN(pred)?0:pred, _diff: diff };
   });
-  list.sort((a,b)=> a._diff - b._diff || new Date(a.created_at) - new Date(b.created_at));
+  list.sort((a,b)=> a._diff - b._diff || parseSupabaseTime(a.created_at) - parseSupabaseTime(b.created_at));
   let banner='';
   if(doneVal!==null && !isNaN(doneVal)){
     const myDiff=Math.abs(doneVal - actualTotal);
@@ -1052,7 +1058,7 @@ async function buildDuDoanUI(){
       const sdtMask=x.sdt? String(x.sdt).replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '—';
       const ten=(x.ho_ten||x.ten||'—').trim();
       const thon=(x.thon||'').trim()||'—';
-      const d=new Date(x.created_at); const s=d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const s=formatVNTime(x.created_at);
       const rowBg= rank===1?'background:linear-gradient(90deg,#fff8e1,#ffecb3)': (i%2===0?'background:#fff':'background:#f8fafc');
       resultHtml+=`<tr style="${rowBg}"><td style="padding:8px 10px;text-align:center">${badge}</td><td style="padding:8px 10px;font-weight:600;max-width:140px;word-break:break-word">${ten}</td><td style="padding:8px 10px;max-width:120px;word-break:break-word">${thon}</td><td style="padding:8px 10px;white-space:nowrap;font-weight:600">${sdtMask}</td><td style="padding:8px 10px;text-align:center;font-weight:800">${x._pred}</td><td style="padding:8px 10px;text-align:center;color:${x._diff===0?'#2e7d32':'#5b21b6'};font-weight:700">${x._diff}</td><td style="padding:8px 10px;color:#475569;font-size:12px;white-space:nowrap">${s}</td></tr>`;
     });

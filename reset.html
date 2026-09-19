@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset - Mô hình Trung thu 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#fffbeb;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;padding:16px;gap:16px}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(127,29,29,.12);max-width:420px;width:100%;overflow:hidden;border:1px solid #fde68a;text-align:center}
+.head{padding:20px;background:linear-gradient(135deg,#7f1d1d,#b45309);color:#fff}
+.head h1{font-size:18px}
+.body{padding:20px}
+.warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:disabled{opacity:.6;cursor:not-allowed}
+.btn-ghost{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.log{margin-top:12px;font-size:12px;color:#57534e;white-space:pre-wrap;text-align:left;background:#fffbeb;padding:8px;border-radius:8px;max-height:160px;overflow:auto;display:none}
+input{width:100%;padding:10px;border:1px solid #fde68a;border-radius:8px;margin-bottom:10px;text-align:center}
+.reset-overlay{position:fixed;inset:0;background:rgba(127,29,29,.45);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.reset-overlay.open{display:flex}
+.reset-modal{background:#fff;border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.2);max-width:360px;width:100%;overflow:hidden;animation:pop .2s ease}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.reset-modal-head{padding:18px 20px 0;text-align:center}
+.reset-modal-icon{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,#fde68a,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:26px}
+.reset-modal-title{font-weight:800;color:#7f1d1d;font-size:16px}
+.reset-modal-sub{font-size:13px;color:#78716c;margin-top:4px}
+.reset-modal-body{padding:14px 20px}
+.reset-modal-input{width:100%;padding:10px 12px;border:1px solid #fde68a;border-radius:10px;text-align:center;letter-spacing:1px}
+.reset-modal-input:focus{outline:none;border-color:#991b1b;box-shadow:0 0 0 3px rgba(127,29,29,.12)}
+.reset-modal-input.err{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.reset-modal-actions{display:flex;gap:10px;padding:0 20px 20px}
+.reset-modal-btn{flex:1;padding:11px;border-radius:10px;font-weight:700;border:none;cursor:pointer}
+.reset-modal-btn.cancel{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.reset-modal-btn.confirm{background:#dc2626;color:#fff}
+.device-list{max-height:340px;overflow:auto;text-align:left;border:1px solid #fde68a;border-radius:10px;background:#fff}
+.device-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #fffbeb}
+.device-item:last-child{border-bottom:none}
+.device-item input[type=checkbox]{width:18px;height:18px;accent-color:#991b1b;flex-shrink:0}
+.device-info{flex:1;min-width:0}
+.device-info .d-name{font-weight:700;font-size:13px;color:#7f1d1d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.device-info .d-meta{font-size:11px;color:#78716c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.device-badge{font-size:11px;background:#fef3c7;color:#92400e;padding:3px 6px;border-radius:6px;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head"><h1>🔄 Reset kết quả</h1><p style="font-size:12px;opacity:.9">Bình chọn + Dự đoán</p></div>
+  <div class="body">
+    <div class="warn">⚠️ Xóa <b>toàn bộ</b> bình chọn & dự đoán trong Supabase. Không khôi phục được!</div>
+    <input id="pw" type="password" placeholder="Nhập mã xác nhận">
+    <button class="btn btn-danger" id="btnReset" onclick="doReset()">Xóa hết Bình chọn + Đoán (Supabase)</button>
+    <button class="btn btn-ghost" id="btnResetDevice" onclick="openResetDeviceModal()">🔄 Reset ID thiết bị này (để nhập mới)</button>
+    <button class="btn btn-ghost" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca" onclick="clearAllStorage()">🧹 Xóa sạch localStorage máy này</button>
+    <button class="btn btn-ghost" onclick="location.href='/'">← Về trang chủ</button>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+<div class="card" style="margin-top:16px;max-width:520px">
+  <div class="head" style="background:linear-gradient(135deg,#b45309,#f59e0b)"><h1>📱 Chọn thiết bị để reset</h1><p style="font-size:12px;opacity:.9">Tick chọn → xóa bình chọn & đoán của thiết bị đó</p></div>
+  <div class="body">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAll" onchange="toggleSelectAll(this)"> Chọn tất cả</label>
+      <button class="btn btn-ghost" style="width:auto;padding:6px 12px;font-size:12px;margin:0" onclick="loadDevices()">↻ Tải danh sách</button>
+    </div>
+    <div class="device-list" id="deviceList"><div style="padding:20px;text-align:center;color:#a8a29e;font-size:13px">Bấm “Tải danh sách” để xem thiết bị đã bình chọn/đoán<br><span style="font-size:11px">Hiển thị tối đa 200 thiết bị</span></div></div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" style="flex:1;min-width:140px" onclick="doResetSelected(false)">🗑️ Reset đã chọn (Supabase)</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:140px" onclick="doResetSelected(true)">Reset + xóa localStorage nếu tick máy này</button>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn btn-ghost" style="width:100%;background:#fef2f2;color:#991b1b;border:1px solid #fecaca" onclick="clearLocalForSelected()">🧹 Chỉ xóa localStorage của thiết bị đã tick (máy này)</button>
+    </div>
+    <p style="font-size:11px;color:#a8a29e;margin-top:8px">Xóa theo <code>device_id</code> trên Supabase. Nút 🧹 chỉ xóa <b>localStorage + sessionStorage trên trình duyệt này</b> nếu <code>device_id</code> đã tick khớp với máy hiện tại.</p>
+  </div>
+</div>
+<div class="card" style="max-width:520px">
+  <div class="head" style="background:linear-gradient(135deg,#0e7490,#06b6d4)"><h1>📤 Xuất dữ liệu khán giả (JSON)</h1><p style="font-size:12px;opacity:.9">Bình chọn + Dự đoán chi tiết theo device</p></div>
+  <div class="body" style="text-align:left">
+    <p style="font-size:12px;color:#57534e;margin-bottom:10px">Xuất toàn bộ <b>Supabase</b> ra JSON — gồm SĐT, họ tên, thôn, STT bình chọn, tên linh vật, số dự đoán, thời gian, IP.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1;min-width:160px;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc" onclick="exportAudienceJSON()">📥 Xuất JSON gộp (1 file)</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:160px" onclick="exportAudienceJSONSplit()">📂 Xuất 2 file riêng</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" style="flex:1;min-width:140px;font-size:12px" onclick="previewAudienceJSON()">👁️ Xem trước 5 device</button>
+      <span id="csvStat" style="font-size:11px;color:#64748b;align-self:center"></span>
+    </div>
+    <div class="log" id="csvLog" style="margin-top:8px"></div>
+    <p style="font-size:11px;color:#a8a29e;margin-top:8px">JSON UTF-8 pretty-printed. Gộp theo <code>device_id</code> — nếu chỉ bình chọn hoặc chỉ dự đoán thì field còn lại là <code>null</code>.</p>
+  </div>
+</div>
+<div class="card" style="max-width:520px">
+  <div class="head" style="background:linear-gradient(135deg,#059669,#34d399)"><h1>🔗 Link tự xóa cho khán giả</h1><p style="font-size:12px;opacity:.9">Gửi link — họ mở là tự xóa và nhập lại được</p></div>
+  <div class="body" style="text-align:left">
+    <p style="font-size:12px;color:#57534e;margin-bottom:8px">Không cần vào máy họ. Gửi 1 trong các link sau, khán giả mở sẽ <b>tự động xóa localStorage</b> trên máy họ:</p>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="shareLink" readonly style="flex:1;font-size:12px;padding:8px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;text-align:left">
+      <button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap" onclick="copyShareLink()">📋 Copy</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn btn-ghost" style="width:auto;padding:6px 10px;font-size:12px;margin:0" onclick="setShareLink('khan-gia')">khan-gia.html?clear=1</button>
+      <button class="btn btn-ghost" style="width:auto;padding:6px 10px;font-size:12px;margin:0" onclick="setShareLink('index')">index.html?clear=1</button>
+      <button class="btn btn-ghost" style="width:auto;padding:6px 10px;font-size:12px;margin:0" onclick="setShareLink('root')">/?clear=1</button>
+    </div>
+    <p style="font-size:11px;color:#a8a29e">Mở link → tự <code>localStorage.clear()</code> + <code>sessionStorage.clear()</code> → hiện thông báo → xóa param → cho phép bình chọn lại. Không cần mật khẩu.</p>
+  </div>
+</div>
+<!-- Popup xác nhận reset thiết bị -->
+<div class="reset-overlay" id="resetModal" onclick="if(event.target===this) closeResetDeviceModal()">
+  <div class="reset-modal">
+    <div class="reset-modal-head">
+      <div class="reset-modal-icon">🔑</div>
+      <div class="reset-modal-title">Xác nhận reset thiết bị</div>
+      <div class="reset-modal-sub">Nhập mật khẩu để xác nhận xóa trên máy này</div>
+    </div>
+    <div class="reset-modal-body">
+      <input id="resetPw" type="password" class="reset-modal-input" placeholder="Nhập mật khẩu">
+      <p style="font-size:11px;color:#a8a29e;margin-top:6px;text-align:center">Sau khi reset bạn có thể nhập lại họ tên/thôn/SĐT</p>
+    </div>
+    <div class="reset-modal-actions">
+      <button class="reset-modal-btn cancel" onclick="closeResetDeviceModal()">Hủy</button>
+      <button class="reset-modal-btn confirm" onclick="confirmResetDevice()">Xác nhận</button>
+    </div>
+  </div>
+  </div>
+</div>
+<script>
+const DC={url:"https://zipvocbtmilyeuhqqrur.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcHZvY2J0bWlseWV1aHFxcnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNTY0NjgsImV4cCI6MjA5OTgzMjQ2OH0.-LUZdiukACGQS7pR71HNFmxmDkDGNi2x3Rs6KM9nN5s"};
+const MODELS=[{stt:1,name:"Hào khí rồng vàng",unit:"Thôn Mậu Đông 1"},{stt:2,name:"Đại sứ bạch thỏ",unit:"Thôn Mậu A 5"},{stt:3,name:"Ngôi sao An Thịnh 1 - vui trung thu gắn kết cộng đồng",unit:"Thôn An Thịnh 1"},{stt:4,name:"Ánh trăng rằm bản em",unit:"Trường Mầm non Sơn Ca"},{stt:5,name:"Ký ức quê hương",unit:"Thôn Yên Thái 2"},{stt:6,name:"Tết trung thu - trăng sáng trên thác khe cam",unit:"Tiểu học Mậu A 1"},{stt:7,name:"Trung thu vùng cao - giữ gìn bản sắc - thắp sáng ước mơ",unit:"Thôn Ngòi A 3"},{stt:8,name:"Ánh trăng miền Quế",unit:"Trường Mầm Non Mậu A 1"},{stt:9,name:"Cá Chép",unit:"Thôn Ngòi A 1"},{stt:10,name:"Vầng trăng khuyết",unit:"Trường THPH Lương Bằng"},{stt:11,name:"Đèn Kéo Quân",unit:"Thôn Mậu A 6"},{stt:12,name:"Con đường mơ ước",unit:"Thôn Yên Thái 2"},{stt:13,name:"Thiên Mã Đón Trăng",unit:"Trường THCS Mậu A 1"},{stt:14,name:"Việt Nam vươn cao - Vui trung thu - thêm tự hào",unit:"Tiểu học Mậu A 2"},{stt:15,name:"Phượng hoàng chẩy hội",unit:"Trường Mầm Non Mậu A 2"},{stt:16,name:"Đón trăng về bản",unit:"Thôn Yên Thái 1"},{stt:17,name:"Đèn Lồng Trung Thu",unit:"Trường PTDTNT THCS&THPT"},{stt:18,name:"Cá Chép",unit:"Thôn An Thịnh 2"},{stt:19,name:"Thỏ Ngọc trông trăng",unit:"Thôn Mậu A 3"},{stt:20,name:"Mái chùa đón trăng",unit:"Trường THCS Mậu A 2"},{stt:21,name:"Đèn ông sao và đèn kéo quân",unit:"Trường THPH Chu Văn An"},{stt:22,name:"Vó Ngựa Phù Đổng",unit:"Thôn Mậu A1"},{stt:23,name:"Ngôi Sao",unit:"Thôn Mậu A 2"},{stt:24,name:"Cá Chép",unit:"Thôn Mậu Đông 2"},{stt:25,name:"Trăng thu đất việt",unit:"Trường Mầm Non Ban Mai"},{stt:26,name:"Thỏ Ngọc Cung Trăng",unit:"Thôn An Thịnh 5"},{stt:27,name:"Mặt trăng rằm tháng 8",unit:"Thôn An Thịnh 3"}];
+const MMap={}; MODELS.forEach(m=>MMap[m.stt]=m);
+function parseSupabaseTime(s){ if(!s) return null; let t=String(s).trim().replace(' ','T'); t=t.replace(/([+-]\d{2})$/, '$1:00').replace(/([+-]\d{2})(\d{2})$/, '$1:$2'); if(!/[Z]$/.test(t) && !/[+-]\d{2}:\d{2}$/.test(t)) t+='Z'; const d=new Date(t); return isNaN(d)? new Date(s): d; }
+function toVN(iso){ if(!iso) return null; try{ const d=parseSupabaseTime(iso); return d.toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour12:false}); }catch(e){ return String(iso); } }
+function toVNISO(iso){ if(!iso) return null; try{ const d=parseSupabaseTime(iso); const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d); const o={}; p.forEach(x=>o[x.type]=x.value); return `${o.year}-${o.month}-${o.day}T${o.hour}:${o.minute}:${o.second}+07:00`; }catch(e){ return String(iso); } }
+function downloadJSON(name, data){
+  const json=JSON.stringify(data, null, 2);
+  const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},800);
+}
+async function fetchPaginated(table, select, clog){
+  const limit=1000; let offset=0; let all=[]; let total=null;
+  for(let page=0; page<20; page++){
+    const url=`${DC.url}/rest/v1/${table}?select=${encodeURIComponent(select)}&order=created_at.asc&limit=${limit}&offset=${offset}`;
+    let r=null;
+    for(let retry=0; retry<3; retry++){
+      try{ r=await fetch(url,{headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`,Prefer:'count=exact'}}); break; }catch(e){ if(retry===2) throw e; await new Promise(res=>setTimeout(res,400*(retry+1))); }
+    }
+    if(!r.ok){
+      const t=await r.text();
+      if(clog) clog.textContent+=`❌ ${table} ${r.status}: ${t.substring(0,220)}\n`;
+      throw new Error(`${table} ${r.status}`);
+    }
+    const rows=await r.json();
+    const cr=r.headers.get('content-range')||r.headers.get('Content-Range')||'';
+    const m=cr.match(/\/(\d+)/); if(m) total=parseInt(m[1],10);
+    all=all.concat(rows);
+    if(clog) clog.textContent+=`  ${table}: ${all.length}${total!=null?`/${total}`:''} (page ${page+1})\n`;
+    if(rows.length < limit) break;
+    offset+=limit;
+    if(total!=null && all.length>=total) break;
+  }
+  return {rows: all, total: total!=null?total:all.length};
+}
+async function fetchAllAudience(){
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){ alert('Nhập mã xác nhận trước khi xuất'); document.getElementById('pw').focus(); return null; }
+  const stat=document.getElementById('csvStat'); const clog=document.getElementById('csvLog');
+  if(stat) stat.textContent='⏳ Đang tải...'; if(clog){ clog.style.display='block'; clog.textContent='⏳ Đang tải bình chọn + dự đoán (pagination 1000)...\n'; }
+  try{
+    const bcSelect='device_id,sdt,ho_ten,thon,ten,stt,voter_ip,user_agent,created_at';
+    const duSelect='device_id,sdt,ho_ten,thon,ten,stt_du_doan,tong_du_doan,created_at';
+    // chạy song song 2 bảng chính, đảm bảo đủ
+    const bcP=fetchPaginated('binh_chon_khan_gia', bcSelect, clog);
+    const duP=fetchPaginated('du_doan', duSelect, clog).catch(async e=>{
+      if(clog) clog.textContent+=`du_doan err, thử view v_du_doan_public: ${e.message}\n`;
+      return fetchPaginated('v_du_doan_public', duSelect, clog);
+    });
+    const [bcRes, duRes]=await Promise.all([bcP, duP]);
+    let bc=bcRes.rows, du=duRes.rows;
+    const bcTotal=bcRes.total, duTotal=duRes.total;
+    // kiểm tra sót
+    if(bc.length < bcTotal) { if(clog) clog.textContent+=`⚠️ BC thiếu ${bcTotal-bc.length} dòng (fetched ${bc.length}/${bcTotal})\n`; }
+    if(du.length < duTotal) { if(clog) clog.textContent+=`⚠️ DU thiếu ${duTotal-du.length} dòng (fetched ${du.length}/${duTotal})\n`; }
+    const sdtNullBc=bc.filter(r=>!r.sdt).length;
+    const sdtNullDu=du.filter(r=>!r.sdt).length;
+    if(sdtNullBc||sdtNullDu) if(clog) clog.textContent+=`ℹ️ sdt null: BC ${sdtNullBc}, DU ${sdtNullDu} (insert cũ trước khi có cột sdt)\n`;
+    if(clog) clog.textContent+=`✅ Đã tải đủ: ${bc.length}/${bcTotal} bình chọn, ${du.length}/${duTotal} dự đoán\n`;
+    if(stat) stat.textContent=`${bc.length}/${bcTotal} phiếu · ${du.length}/${duTotal} đoán`;
+    if(bc.length!==bcTotal || du.length!==duTotal){ if(clog) clog.textContent+=`⚠️ Chưa khớp total — thử lại hoặc kiểm tra RLS\n`; }
+    return {bc, du, bcTotal, duTotal};
+  }catch(e){ if(clog) clog.textContent+='❌ '+e.message+'\n'; if(stat) stat.textContent='❌ lỗi'; return null; }
+}
+async function exportAudienceJSON(){
+  const data=await fetchAllAudience(); if(!data) return;
+  const {bc, du}=data;
+  const clog=document.getElementById('csvLog');
+  const map={};
+  bc.forEach(r=>{ if(!map[r.device_id]) map[r.device_id]={}; map[r.device_id].bc=r; });
+  du.forEach(r=>{ if(!map[r.device_id]) map[r.device_id]={}; map[r.device_id].du=r; });
+  const arr=Object.entries(map).sort((a,b)=> new Date((a[1].bc?.created_at||a[1].du?.created_at)) - new Date((b[1].bc?.created_at||b[1].du?.created_at))).map(([dev,obj])=>{
+    const b=obj.bc, d=obj.du;
+    const m=b?MMap[b.stt]:null;
+    const duTong=d ? (d.tong_du_doan!=null?d.tong_du_doan:d.stt_du_doan) : null;
+    return {
+      device_id: dev,
+      ho_ten: (b?.ho_ten||b?.ten||d?.ho_ten||d?.ten||'').trim() || null,
+      thon: (b?.thon||d?.thon||'').trim() || null,
+      sdt: (b?.sdt||d?.sdt||'').trim() || null,
+      binh_chon: b ? {stt: b.stt, ten_mo_hinh: m?m.name:null, don_vi: m?m.unit:null, created_at: toVNISO(b.created_at), created_at_vn: toVN(b.created_at), created_at_utc: b.created_at, voter_ip: b.voter_ip||null, user_agent: b.user_agent||null} : null,
+      du_doan: d ? {tong: duTong, created_at: toVNISO(d.created_at), created_at_vn: toVN(d.created_at), created_at_utc: d.created_at} : null,
+      _raw_bc: b||null,
+      _raw_du: d||null
+    };
+  });
+  const out={exported_at: new Date().toISOString(), exported_at_vn: toVN(new Date().toISOString()), exported_at_vn_iso: toVNISO(new Date().toISOString()), timezone: 'Asia/Ho_Chi_Minh', total_device: arr.length, total_binh_chon: bc.length, total_du_doan: du.length, data: arr};
+  const fn=`khan_gia_${new Date().toISOString().slice(0,10)}_${arr.length}device.json`;
+  downloadJSON(fn, out);
+  if(clog) clog.textContent+=`✅ Đã xuất ${fn} (${arr.length} device)\n`;
+  log(`📥 Đã xuất JSON gộp: ${fn} (${bc.length} phiếu, ${du.length} đoán, ${arr.length} device)`);
+}
+async function exportAudienceJSONSplit(){
+  const data=await fetchAllAudience(); if(!data) return;
+  const {bc, du}=data;
+  const clog=document.getElementById('csvLog');
+  const bcOut=bc.map(r=>{ const m=MMap[r.stt]; return {stt:r.stt, ten_mo_hinh:m?m.name:null, don_vi:m?m.unit:null, sdt:r.sdt||null, ho_ten:(r.ho_ten||r.ten||'').trim()||null, thon:(r.thon||'').trim()||null, device_id:r.device_id, voter_ip:r.voter_ip||null, user_agent:r.user_agent||null, created_at:toVNISO(r.created_at), created_at_vn:toVN(r.created_at), created_at_utc:r.created_at}; });
+  const fn1=`binh_chon_${new Date().toISOString().slice(0,10)}_${bc.length}.json`;
+  downloadJSON(fn1, {exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), exported_at_vn_iso:toVNISO(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total:bc.length, data:bcOut});
+  const duOut=du.map(r=>{ const v=r.tong_du_doan!=null?r.tong_du_doan:r.stt_du_doan; return {du_doan_tong:v, sdt:r.sdt||null, ho_ten:(r.ho_ten||r.ten||'').trim()||null, thon:(r.thon||'').trim()||null, device_id:r.device_id, created_at:toVNISO(r.created_at), created_at_vn:toVN(r.created_at), created_at_utc:r.created_at}; });
+  const fn2=`du_doan_${new Date().toISOString().slice(0,10)}_${du.length}.json`;
+  setTimeout(()=>downloadJSON(fn2, {exported_at:new Date().toISOString(), exported_at_vn:toVN(new Date().toISOString()), exported_at_vn_iso:toVNISO(new Date().toISOString()), timezone:'Asia/Ho_Chi_Minh', total:du.length, data:duOut}), 600);
+  if(clog) clog.textContent+=`✅ Đã xuất 2 file: ${fn1} + ${fn2}\n`;
+  log(`📂 Đã xuất 2 file JSON: ${fn1} (${bc.length}) + ${fn2} (${du.length})`);
+}
+async function previewAudienceJSON(){
+  const data=await fetchAllAudience(); if(!data) return;
+  const {bc, du}=data;
+  const clog=document.getElementById('csvLog'); if(clog) clog.style.display='block';
+  const map={}; bc.forEach(r=>{ if(!map[r.device_id]) map[r.device_id]={}; map[r.device_id].bc=r; }); du.forEach(r=>{ if(!map[r.device_id]) map[r.device_id]={}; map[r.device_id].du=r; });
+  const sample=Object.entries(map).slice(0,2).map(([dev,obj])=>{
+    const b=obj.bc, d=obj.du;
+    const duV=d?(d.tong_du_doan!=null?d.tong_du_doan:d.stt_du_doan):null;
+    return {device_id:dev.substring(0,8)+'…', ho_ten:(b?.ho_ten||d?.ho_ten||'').trim(), thon:(b?.thon||d?.thon||'').trim(), sdt:(b?.sdt||d?.sdt||''), stt:b?b.stt:null, du_doan:duV, created_at_vn:b?toVN(b.created_at):(d?toVN(d.created_at):null)};
+  });
+  if(clog) clog.textContent=`Xem trước 2 device (tổng ${Object.keys(map).length} device, ${bc.length} phiếu, ${du.length} đoán) — giờ VN Asia/Ho_Chi_Minh:\n`+JSON.stringify(sample,null,2);
+}
+function log(m){const el=document.getElementById('log');el.style.display='block';el.textContent+=m+"\n"}
+function openResetDeviceModal(){ document.getElementById('resetPw').value=''; document.getElementById('resetPw').classList.remove('err'); document.getElementById('resetModal').classList.add('open'); setTimeout(()=>document.getElementById('resetPw').focus(),100); }
+function closeResetDeviceModal(){ document.getElementById('resetModal').classList.remove('open'); }
+function confirmResetDevice(){
+  const pw=document.getElementById('resetPw').value.trim();
+  const el=document.getElementById('resetPw');
+  if(pw!=='TT2026'){ el.classList.add('err'); el.focus(); alert('Mật khẩu sai!'); return; }
+  el.classList.remove('err');
+  closeResetDeviceModal();
+   try{
+    localStorage.clear();
+    sessionStorage.clear();
+    log('✅ Đã xóa toàn bộ localStorage + sessionStorage trên máy này. Tải lại để nhập mới.');
+    alert('Đã reset toàn bộ thiết bị này! Bạn có thể nhập lại họ tên/thôn/SĐT.');
+  }catch(e){ log('❌ Lỗi reset device: '+e.message); }
+}
+function resetDevice(){ openResetDeviceModal(); }
+function clearAllStorage(){
+  if(!confirm('Xóa TOÀN BỘ localStorage + sessionStorage trên máy này? Không khôi phục được!')) return;
+  try{
+    const n=localStorage.length;
+    localStorage.clear();
+    sessionStorage.clear();
+    log(`✅ Đã xóa sạch ${n} key localStorage + toàn bộ sessionStorage trên máy này.`);
+    alert('Đã xóa sạch localStorage! Tải lại trang để nhập mới.');
+  }catch(e){ log('❌ Lỗi xóa storage: '+e.message); }
+}
+function clearLocalForSelected(){
+  const checked=[...document.querySelectorAll('#deviceList input[type=checkbox]:checked')].map(c=>c.value);
+  if(!checked.length){ alert('Chưa tick chọn thiết bị nào trong danh sách'); return; }
+  const myId=localStorage.getItem('bc_device_id')||localStorage.getItem('cd2026_device_id')||'';
+  const isMyDeviceSelected = myId && checked.includes(myId);
+  if(!myId){
+    if(!confirm(`Máy này chưa có device_id. Vẫn xóa toàn bộ localStorage (${localStorage.length} key)?`)) return;
+  } else if(!isMyDeviceSelected){
+    if(!confirm(`Thiết bị hiện tại (${myId.substring(0,8)}…) KHÔNG nằm trong ${checked.length} thiết bị đã tick.\n\nVẫn xóa toàn bộ localStorage máy này?`)) return;
+  } else {
+    if(!confirm(`Xóa toàn bộ localStorage + sessionStorage của máy này?\nDevice: ${myId.substring(0,8)}… (${checked.length} đã tick, có khớp máy này)`)) return;
+  }
+  try{
+    const n=localStorage.length;
+    localStorage.clear(); sessionStorage.clear();
+    log(`✅ Đã xóa ${n} key localStorage + sessionStorage (kích hoạt từ danh sách, tick ${checked.length}, khớp máy này: ${isMyDeviceSelected?'có':'không'})`);
+    alert('Đã xóa localStorage máy này!');
+  }catch(e){ log('❌ Lỗi xóa storage: '+e.message); }
+}
+function setShareLink(which){
+  const base=location.origin + location.pathname.replace(/\/reset\.html$/,'/');
+  let url='';
+  if(which==='khan-gia') url=base+'khan-gia.html?clear=1';
+  else if(which==='index') url=base+'index.html?clear=1';
+  else url=base+'?clear=1';
+  document.getElementById('shareLink').value=url;
+}
+function copyShareLink(){
+  const el=document.getElementById('shareLink');
+  if(!el.value) setShareLink('khan-gia');
+  navigator.clipboard.writeText(el.value).then(()=>{ log('📋 Đã copy: '+el.value); alert('Đã copy link!'); }).catch(()=>{ el.select(); document.execCommand('copy'); alert('Đã copy!'); });
+}
+(function initShareLink(){ try{ setShareLink('khan-gia'); }catch(e){} })();
+async function loadDevices(){
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){ document.getElementById('pw').classList.add('err'); alert('Nhập mã xác nhận trước khi tải danh sách'); document.getElementById('pw').focus(); return; }
+  document.getElementById('pw').classList.remove('err');
+  const list=document.getElementById('deviceList');
+  list.innerHTML='<div style="padding:20px;text-align:center;color:#a8a29e">⏳ Đang tải...</div>';
+  try{
+    const [r1,r2]=await Promise.all([
+      fetch(`${DC.url}/rest/v1/du_doan?select=device_id,sdt,ho_ten,thon,ten,stt_du_doan,created_at&order=created_at.desc&limit=200`,{headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}}),
+      fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?select=device_id,sdt,ho_ten,thon,ten,stt,created_at&order=created_at.desc&limit=200`,{headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}})
+    ]);
+    let du=[], bc=[];
+    if(r1.ok) du=await r1.json(); else {
+      const t=await r1.text(); if(t.includes('ho_ten')||t.includes('column')){ const rr=await fetch(`${DC.url}/rest/v1/du_doan?select=device_id,sdt,stt_du_doan,created_at&order=created_at.desc&limit=200`,{headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}}); if(rr.ok) du=await rr.json(); }
+    }
+    if(r2.ok) bc=await r2.json(); else {
+      const t=await r2.text(); if(t.includes('ho_ten')||t.includes('column')){ const rr=await fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?select=device_id,sdt,stt,created_at&order=created_at.desc&limit=200`,{headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}}); if(rr.ok) bc=await rr.json(); }
+    }
+    const map={};
+    du.forEach(x=>{ if(!map[x.device_id]) map[x.device_id]={device_id:x.device_id,sdt:x.sdt,ho_ten:x.ho_ten||x.ten||'',thon:x.thon||'',du:1,bc:0,last:x.created_at}; else { map[x.device_id].du++; if(x.created_at>map[x.device_id].last) map[x.device_id].last=x.created_at; if(!map[x.device_id].ho_ten) map[x.device_id].ho_ten=x.ho_ten||x.ten||''; if(!map[x.device_id].thon) map[x.device_id].thon=x.thon||''; }});
+    bc.forEach(x=>{ if(!map[x.device_id]) map[x.device_id]={device_id:x.device_id,sdt:x.sdt,ho_ten:x.ho_ten||x.ten||'',thon:x.thon||'',du:0,bc:1,last:x.created_at}; else { map[x.device_id].bc++; if(x.created_at>map[x.device_id].last) map[x.device_id].last=x.created_at; if(!map[x.device_id].ho_ten) map[x.device_id].ho_ten=x.ho_ten||x.ten||''; if(!map[x.device_id].thon) map[x.device_id].thon=x.thon||''; if(!map[x.device_id].sdt) map[x.device_id].sdt=x.sdt; }});
+    const rows=Object.values(map).sort((a,b)=> new Date(b.last)-new Date(a.last));
+    if(!rows.length){ list.innerHTML='<div style="padding:20px;text-align:center;color:#a8a29e">Chưa có thiết bị nào</div>'; return; }
+    const myId=(localStorage.getItem('bc_device_id')||localStorage.getItem('cd2026_device_id')||'');
+    list.innerHTML=rows.map(r=>{
+      const sdtMask=r.sdt? String(r.sdt).replace(/(\d{3})\d+(\d{2})$/,'$1****$2') : '—';
+      const ten=(r.ho_ten||'').trim()||'—';
+      const thon=(r.thon||'').trim()||'—';
+      const badges=[];
+      if(r.bc) badges.push(`${r.bc} phiếu`);
+      if(r.du) badges.push(`${r.du} đoán`);
+      const isMe = myId && r.device_id===myId;
+      return `<label class="device-item" style="${isMe?'background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;margin:2px 0':''}"><input type="checkbox" value="${r.device_id}"><div class="device-info"><div class="d-name">${ten} ${isMe?'<span style="font-size:10px;background:#dc2626;color:#fff;padding:2px 5px;border-radius:4px;margin-left:4px">📍 Máy này</span>':''}</div><div class="d-meta">${thon} · ${sdtMask} · <span style="font-family:monospace">${r.device_id.substring(0,8)}…</span></div></div><span class="device-badge">${badges.join(' · ')}</span></label>`;
+    }).join('');
+    log(`Đã tải ${rows.length} thiết bị${myId?` (máy này: ${myId.substring(0,8)}…)` : ''}`);
+  }catch(e){ list.innerHTML=`<div style="padding:12px;color:#dc2626">❌ Lỗi: ${e.message}</div>`; log('❌ loadDevices: '+e.message); }
+}
+function toggleSelectAll(el){
+  document.querySelectorAll('#deviceList input[type=checkbox]').forEach(c=> c.checked=el.checked);
+}
+async function doResetSelected(clearLocal){
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){ document.getElementById('pw').classList.add('err'); alert('Nhập mã xác nhận'); document.getElementById('pw').focus(); return; }
+  document.getElementById('pw').classList.remove('err');
+  const checked=[...document.querySelectorAll('#deviceList input[type=checkbox]:checked')].map(c=>c.value);
+  if(!checked.length){ alert('Chưa chọn thiết bị nào'); return; }
+  if(!confirm(`Xóa ${checked.length} thiết bị đã chọn? (bình chọn + đoán)`)) return;
+  const inFilter = `device_id=in.(${checked.map(v=>`"${v}"`).join(',')})`;
+  try{
+    log(`Đang xóa ${checked.length} thiết bị...`);
+    const [r1,r2]=await Promise.all([
+      fetch(`${DC.url}/rest/v1/du_doan?${inFilter}`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}}),
+      fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?${inFilter}`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}})
+    ]);
+    log(`du_doan: ${r1.status} | binh_chon: ${r2.status}`);
+    if(!r1.ok){ const t=await r1.text(); log('du_doan err: '+t); }
+    if(!r2.ok){ const t=await r2.text(); log('binh_chon err: '+t); }
+    if(r1.ok && r2.ok){
+      log(`✅ Đã xóa ${checked.length} thiết bị`);
+      alert(`Đã reset ${checked.length} thiết bị`);
+      if(clearLocal){
+        const myId=localStorage.getItem('bc_device_id')||localStorage.getItem('cd2026_device_id');
+        if(myId && checked.includes(myId)){
+          localStorage.clear(); sessionStorage.clear();
+          log('✅ Đã xóa toàn bộ localStorage máy này');
+        }
+      }
+      loadDevices();
+    } else {
+      log('⚠️ Kiểm tra RLS DELETE cho anon');
+    }
+  }catch(e){ log('❌ Lỗi: '+e.message); }
+}
+async function doReset(){
+  const pw=document.getElementById('pw').value.trim();
+  if(pw!=='TT2026'){document.getElementById('pw').classList.add('err'); alert('Mã sai!'); return}
+  document.getElementById('pw').classList.remove('err');
+  if(!confirm('Chắc chắn XÓA HẾT bình chọn + dự đoán trên Supabase?')) return;
+  const btn=document.getElementById('btnReset'); btn.disabled=true; btn.textContent='⏳ Đang xóa...';
+  try{
+    // Xóa du_doan
+    let r1=await fetch(`${DC.url}/rest/v1/du_doan?device_id=neq.000`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}});
+    log(`du_doan: ${r1.status} ${r1.statusText}`);
+    // Xóa binh_chon_khan_gia (dùng stt neq -1 để match all)
+    let r2=await fetch(`${DC.url}/rest/v1/binh_chon_khan_gia?stt=neq.-1`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}});
+    log(`binh_chon_khan_gia: ${r2.status} ${r2.statusText}`);
+    // Thử fallback nếu RLS chặn delete với filter khác
+    if(!r1.ok){ 
+      const t=await r1.text(); log('du_doan detail: '+t);
+      // thử với id neq 0
+      r1=await fetch(`${DC.url}/rest/v1/du_doan?id=neq.0`,{method:'DELETE',headers:{apikey:DC.key,Authorization:`Bearer ${DC.key}`}});
+      log(`du_doan retry: ${r1.status}`);
+    }
+    if(!r2.ok){
+      const t=await r2.text(); log('binh_chon detail: '+t);
+    }
+    if(r1.ok && r2.ok){ log('✅ Đã xóa xong!'); alert('Đã reset xong!'); }
+    else { log('⚠️ Kiểm tra RLS: cần cho anon DELETE. Chạy SQL bên dưới nếu lỗi.'); }
+  }catch(e){ log('❌ Lỗi: '+e.message)}
+  btn.disabled=false; btn.textContent='Xóa hết Bình chọn + Đoán';
+}
+// auto nếu ?confirm=TT2026
+if(new URLSearchParams(location.search).get('confirm')==='TT2026'){
+  document.getElementById('pw').value='TT2026';
+  setTimeout(doReset,600);
+}
+</script>
+</body>
+</html>
